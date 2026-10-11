@@ -1,0 +1,360 @@
+<title>SMC 백테스트 차트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 레이아웃: 결론 카드 3장 → 큰 차트(도구막대 포함) → 전략별 상세표 → 규칙과 데이터 출처. 한 열, 최대 1120px. */
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --line: #d6dde4; --fg: #18212b; --muted: #5a6876;
+  --up: #1e8757; --down: #c4423a; --ob: #b5761a; --fvg: #2f63cf; --fo: #8447b8;
+  --accent: #2f63cf; --good: #1e8757; --bad: #c4423a; --chip: #e3e8ee;
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141a; --panel: #161d25; --line: #28323d; --fg: #dbe3ea; --muted: #8b9aa9;
+  --up: #3fbf86; --down: #e5685d; --ob: #e2a540; --fvg: #6f9cf0; --fo: #b98be3;
+  --accent: #6f9cf0; --good: #3fbf86; --bad: #e5685d; --chip: #1f2832; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f141a; --panel: #161d25; --line: #28323d; --fg: #dbe3ea; --muted: #8b9aa9;
+  --up: #3fbf86; --down: #e5685d; --ob: #e2a540; --fvg: #6f9cf0; --fo: #b98be3;
+  --accent: #6f9cf0; --good: #3fbf86; --bad: #e5685d; --chip: #1f2832; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.6; margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 28px; }
+h1, h2 { text-wrap: balance; margin: 0; line-height: 1.25; }
+h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.15rem; font-weight: 600; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { color: var(--muted); max-width: 68ch; margin: 6px 0 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 4px; }
+.wrap > *, .tables > * { min-width: 0; }
+
+.verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; min-width: 0; }
+.card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card .name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.big { font-family: var(--mono); font-size: 1.9rem; font-weight: 500; line-height: 1.1; }
+.pill { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+.pill.bad { color: var(--bad); } .pill.good { color: var(--good); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 0.85rem; color: var(--muted); }
+.kv b { font-weight: 500; color: var(--fg); text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); align-items: center; }
+.toolbar .sep { flex: 1 1 auto; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 10px; border-radius: 999px;
+  background: var(--chip); cursor: pointer; user-select: none; border: 1px solid transparent; }
+.chip input { accent-color: var(--accent); margin: 0; }
+.chip:focus-within { border-color: var(--accent); }
+button { font: inherit; font-size: 0.82rem; color: var(--fg); background: var(--chip); border: 1px solid var(--line);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+canvas { display: block; width: 100%; height: 460px; touch-action: pan-y; cursor: grab; }
+canvas.dragging { cursor: grabbing; }
+.readout { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); padding: 8px 12px; border-top: 1px solid var(--line);
+  min-height: 2.4em; overflow-x: auto; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--muted); padding: 0 12px 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.slider { padding: 8px 12px 4px; }
+
+.tables { display: grid; gap: 20px; }
+.tscroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 620px; }
+th, td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+tbody tr:last-child td { border-bottom: 0; }
+tr.base td { color: var(--muted); font-style: italic; }
+td.neg { color: var(--bad); } td.pos { color: var(--good); }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.notes section { min-width: 0; }
+.notes ul { margin: 8px 0 0; padding-left: 1.1em; color: var(--muted); font-size: 0.9rem; display: grid; gap: 4px; max-width: 65ch; }
+.notes b { color: var(--fg); font-weight: 600; }
+@media (max-width: 560px) { canvas { height: 360px; } h1 { font-size: 1.5rem; } .big { font-size: 1.6rem; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">쉽알남 비밀 생존 전략 1·2·5장 검증</div>
+    <h1 id="h1">SMC 백테스트 차트</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="verdicts" id="verdicts"></div>
+
+  <div class="chartbox">
+    <div class="toolbar">
+      <label class="chip"><input type="checkbox" id="tg-ob" checked><span class="swatch" style="background:var(--ob)"></span>오더블럭</label>
+      <label class="chip"><input type="checkbox" id="tg-fvg" checked><span class="swatch" style="background:var(--fvg)"></span>FVG</label>
+      <label class="chip"><input type="checkbox" id="tg-fo" checked><span class="swatch" style="background:var(--fo)"></span>거짓 돌파</label>
+      <label class="chip"><input type="checkbox" id="tg-tr" checked>진입·청산</label>
+      <label class="chip"><input type="checkbox" id="tg-sw">유동성 흡수만</label>
+      <span class="sep"></span>
+      <button id="b-prev" type="button">◀ 이전 거래</button>
+      <button id="b-next" type="button">다음 거래 ▶</button>
+      <button id="b-in" type="button" aria-label="확대">＋</button>
+      <button id="b-out" type="button" aria-label="축소">－</button>
+      <button id="b-end" type="button">최근</button>
+    </div>
+    <canvas id="cv" aria-label="캔들 차트"></canvas>
+    <div class="slider"><input type="range" id="pos" aria-label="차트 위치" min="1" max="1" value="1"></div>
+    <div class="readout" id="readout">차트를 드래그하면 이동, 마우스 휠이나 ＋/－로 확대·축소합니다.</div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--ob);opacity:.45"></span>OB 구간 (생성 → 첫 도달까지)</span>
+      <span><span class="swatch" style="background:var(--fvg);opacity:.45"></span>FVG 구간</span>
+      <span><span class="swatch" style="border:1.5px solid var(--fg)"></span>테두리 = 유동성 흡수 동반</span>
+      <span><span class="swatch" style="background:var(--fo)"></span>거짓 돌파 기준 라인</span>
+      <span>▲▼ 진입, ● 청산 (<span style="color:var(--good)">이익</span> / <span style="color:var(--bad)">손실</span>)</span>
+    </div>
+  </div>
+
+  <div class="tables" id="tables"></div>
+
+  <div class="notes">
+    <section>
+      <h2>코드로 옮긴 규칙</h2>
+      <ul id="rules"></ul>
+    </section>
+    <section>
+      <h2>읽는 법</h2>
+      <ul>
+        <li><b>R</b>은 손절폭 대비 손익입니다. −1R은 손절 한 번, +2R은 손절폭의 두 배 이익입니다.</li>
+        <li><b>평균 R이 0보다 커야</b> 장기적으로 돈을 법니다. 승률만 높아서는 소용없습니다.</li>
+        <li><b>무작위 진입</b>은 같은 방향, 같은 손절폭과 익절폭으로 아무 시점에나 들어간 결과입니다. 전략이 이보다 나아야 타점에 의미가 있습니다.</li>
+        <li>체결은 보수적으로 계산했습니다. 한 캔들에서 손절과 익절이 모두 닿으면 손절로 보고, 수수료를 진입과 청산에 각각 뺐습니다.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script type="application/json" id="payload">__PAYLOAD__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('payload').textContent);
+  const N = D.t.length;
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const fmtP = (x) => x >= 1000 ? x.toLocaleString('en-US', {maximumFractionDigits: 0}) : x.toLocaleString('en-US', {maximumFractionDigits: 4});
+  const fmtR = (x) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(3) + 'R';
+  const day = (s) => new Date(s * 1000).toISOString().slice(0, 10);
+  const stamp = (s) => new Date(s * 1000).toISOString().slice(5, 16).replace('T', ' ');
+  const NAMES = {OB: '오더블럭', FVG: 'FVG', FAKEOUT: '거짓 돌파'};
+  const COLORS = {OB: '--ob', FVG: '--fvg', FAKEOUT: '--fo'};
+
+  // ---------- 머리말과 결론 카드
+  $('h1').textContent = D.title;
+  document.title = 'SMC 백테스트 차트 · ' + D.title;
+  $('lede').textContent = `${day(D.t[0])} ~ ${day(D.t[N - 1])}, 캔들 ${N.toLocaleString()}개. ` +
+    `같은 기간 그냥 들고 있었다면 ${D.data.buy_hold_pct > 0 ? '+' : ''}${D.data.buy_hold_pct}%. ` +
+    `수수료는 한쪽 ${(D.config.fee * 100).toFixed(2)}%로 계산했습니다.`;
+
+  const v = $('verdicts');
+  for (const [k, r] of Object.entries(D.summary)) {
+    const a = r.all, b = r.random_baseline;
+    if (!a.trades) continue;
+    const plus = a.avg_r > 0, beats = a.avg_r > b.avg_r;
+    const pill = plus && beats ? ['good', '플러스'] : plus ? ['', '무작위 수준'] : ['bad', '손실'];
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `
+      <div class="top"><span class="name"><span class="swatch" style="background:var(${COLORS[k]})"></span>${NAMES[k]}</span>
+        <span class="pill ${pill[0]}">${pill[1]}</span></div>
+      <div><span class="big ${plus ? '' : ''}">${fmtR(a.avg_r)}</span> <span style="color:var(--muted);font-size:.85rem">거래당 평균</span></div>
+      <div class="kv">
+        <span>거래 수</span><b>${a.trades.toLocaleString()}</b>
+        <span>승률</span><b>${(a.win_rate * 100).toFixed(1)}%</b>
+        <span>누적</span><b>${a.total_r > 0 ? '+' : ''}${a.total_r}R</b>
+        <span>무작위 진입</span><b>${fmtR(b.avg_r)}</b>
+      </div>`;
+    v.appendChild(el);
+  }
+
+  // ---------- 상세 표
+  const tables = $('tables');
+  for (const [k, r] of Object.entries(D.summary)) {
+    const flag = k === 'FAKEOUT' ? 'trap' : 'sweep';
+    const flagName = k === 'FAKEOUT' ? '함정(2캔들 이상)' : '유동성 흡수';
+    const rows = [['전체', r.all], ['매수만', r.long], ['매도만', r.short],
+      [flagName + ' 있음', r['with_' + flag]], [flagName + ' 없음', r['without_' + flag]],
+      ...Object.entries(r.by_year).map(([y, s]) => [y + '년', s]), ['무작위 진입 (대조군)', r.random_baseline, 'base']];
+    const box = document.createElement('div');
+    box.innerHTML = `<h2 style="margin-bottom:8px">${NAMES[k]}</h2><div class="tscroll"><table>
+      <thead><tr><th>구분</th><th>거래</th><th>승률</th><th>평균</th><th>누적</th><th>PF</th><th>최대 낙폭</th></tr></thead>
+      <tbody>${rows.map(([n, s, cls]) => !s.trades ? `<tr><td>${n}</td><td colspan="6">거래 없음</td></tr>` : `
+        <tr class="${cls || ''}"><td>${n}</td><td class="num">${s.trades.toLocaleString()}</td>
+        <td class="num">${(s.win_rate * 100).toFixed(1)}%</td>
+        <td class="num ${s.avg_r > 0 ? 'pos' : 'neg'}">${fmtR(s.avg_r)}</td>
+        <td class="num">${s.total_r > 0 ? '+' : ''}${s.total_r}R</td>
+        <td class="num">${s.profit_factor}</td><td class="num">${s.max_dd_r}R</td></tr>`).join('')}</tbody></table></div>`;
+    tables.appendChild(box);
+  }
+
+  const P = D.params, C = D.config;
+  $('rules').innerHTML = [
+    `<b>오더블럭</b>: 반대색 캔들 뒤 몸통 ${P.ob_body_ratio}배 이상인 캔들이 앞 캔들 꼬리를 넘어 마감. 존은 첫 캔들 몸통, 손절은 두 캔들 꼬리 끝.`,
+    `<b>FVG</b>: 가운데 캔들 몸통이 앞뒤의 ${P.fvg_body_ratio}배 이상이고 1번 꼬리와 3번 꼬리 사이에 빈 공간. 손절은 세 캔들 꼬리 끝.`,
+    `<b>진입과 익절</b>: 존에 처음 닿을 때 지정가 진입(${C.max_wait}캔들 안에 안 닿으면 포기). 익절은 되돌림 전 파동의 고점(하락형은 저점) 탈환.`,
+    `<b>거짓 돌파</b>: 스윙 저점(좌우 ${P.pivot_k}캔들)을 깬 뒤 ${P.reclaim_within}캔들 안에 종가로 복귀하면 진입. 손절은 이탈 꼬리 끝, 익절은 가장 가까운 스윙 고점.`,
+    `<b>유동성 흡수</b>: 패턴 꼬리가 직전 ${P.sweep_lookback}캔들의 저점(고점)을 깬 경우. 강의에서 신뢰도가 오른다고 한 조건입니다.`,
+  ].map((x) => `<li>${x}</li>`).join('');
+
+  // ---------- 차트
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const view = {end: N, count: Math.min(160, N)};
+  const tg = {OB: $('tg-ob'), FVG: $('tg-fvg'), FAKEOUT: $('tg-fo')};
+  let hover = -1;
+  const pos = $('pos');
+  pos.max = N;
+
+  const clampView = () => {
+    view.count = Math.max(30, Math.min(1500, N, Math.round(view.count)));
+    view.end = Math.max(view.count, Math.min(N, Math.round(view.end)));
+    pos.min = view.count; pos.value = view.end;
+  };
+
+  let geo = null;
+  function draw() {
+    clampView();
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.clientWidth, H = cv.clientHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const padR = 70, padB = 24, padT = 10, plotW = W - padR, plotH = H - padB - padT;
+    const s = view.end - view.count, e = view.end, bw = plotW / view.count;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = s; i < e; i++) { lo = Math.min(lo, D.l[i]); hi = Math.max(hi, D.h[i]); }
+    const m = (hi - lo) * 0.06 || 1; lo -= m; hi += m;
+    const x = (i) => (i - s + 0.5) * bw;
+    const y = (p) => padT + (hi - p) / (hi - lo) * plotH;
+    geo = {s, bw, plotW, padT, plotH, lo, hi};
+
+    const col = {fg: css('--fg'), muted: css('--muted'), line: css('--line'), up: css('--up'), down: css('--down'),
+      OB: css('--ob'), FVG: css('--fvg'), FAKEOUT: css('--fo'), good: css('--good'), bad: css('--bad')};
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '11px ' + css('--mono');
+
+    // 가격 눈금
+    const step = (() => { const raw = (hi - lo) / 6, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p;
+      return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; })();
+    ctx.strokeStyle = col.line; ctx.fillStyle = col.muted; ctx.lineWidth = 1; ctx.textBaseline = 'middle';
+    for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
+      const yy = Math.round(y(p)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(plotW, yy); ctx.stroke();
+      ctx.fillText(fmtP(p), plotW + 8, yy);
+    }
+    // 시간 눈금
+    ctx.textBaseline = 'alphabetic';
+    const every = Math.max(1, Math.ceil(110 / bw));
+    for (let i = s + ((every - (s % every)) % every); i < e; i += every) {
+      ctx.fillText(stamp(D.t[i]), Math.min(x(i) - 28, plotW - 70), H - 6);
+    }
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, plotW, H - padB); ctx.clip();
+
+    // 존
+    const sweepOnly = $('tg-sw').checked;
+    for (const [kind, side, a, b, top, bot, sw] of D.zones) {
+      if (b < s || a >= e || !tg[kind].checked || (sweepOnly && !sw)) continue;
+      const x0 = x(a) - bw / 2, x1 = x(b) + bw / 2, y0 = y(top), y1 = y(bot);
+      ctx.globalAlpha = 0.18; ctx.fillStyle = col[kind]; ctx.fillRect(x0, y0, x1 - x0, Math.max(1, y1 - y0));
+      if (sw) { ctx.globalAlpha = 0.9; ctx.strokeStyle = col.fg; ctx.lineWidth = 1.2; ctx.strokeRect(x0, y0, x1 - x0, Math.max(1, y1 - y0)); }
+      ctx.globalAlpha = 1;
+    }
+    // 거짓 돌파 기준 라인
+    if (tg.FAKEOUT.checked) {
+      ctx.strokeStyle = col.FAKEOUT; ctx.fillStyle = col.FAKEOUT; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      for (const [ci, lvl, side, trap] of D.fakeouts) {
+        if (ci < s - 12 || ci >= e || (sweepOnly && !trap)) continue;
+        ctx.beginPath(); ctx.moveTo(x(ci - 12), y(lvl)); ctx.lineTo(x(ci) + bw / 2, y(lvl)); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+    // 캔들
+    const cw = Math.max(1, bw * 0.68);
+    for (let i = s; i < e; i++) {
+      const up = D.c[i] >= D.o[i], xx = x(i);
+      ctx.strokeStyle = ctx.fillStyle = up ? col.up : col.down; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(xx) + 0.5, y(D.h[i])); ctx.lineTo(Math.round(xx) + 0.5, y(D.l[i])); ctx.stroke();
+      const yt = y(Math.max(D.o[i], D.c[i])), yb = y(Math.min(D.o[i], D.c[i]));
+      ctx.fillRect(xx - cw / 2, yt, cw, Math.max(1, yb - yt));
+    }
+    // 거래
+    if ($('tg-tr').checked) {
+      for (const [kind, side, ei, xi, en, ex, st, tp, r, sw] of D.trades) {
+        if (xi < s || ei >= e || !tg[kind === 'FAKEOUT' ? 'FAKEOUT' : kind].checked || (sweepOnly && !sw)) continue;
+        const c = r > 0 ? col.good : col.bad;
+        ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
+        ctx.beginPath(); ctx.moveTo(x(ei), y(en)); ctx.lineTo(x(xi), y(ex)); ctx.stroke(); ctx.setLineDash([]);
+        const ty = y(en), tx = x(ei), sz = Math.max(4, Math.min(7, bw * 0.5));
+        ctx.beginPath();
+        if (side > 0) { ctx.moveTo(tx, ty); ctx.lineTo(tx - sz, ty + sz * 1.6); ctx.lineTo(tx + sz, ty + sz * 1.6); }
+        else { ctx.moveTo(tx, ty); ctx.lineTo(tx - sz, ty - sz * 1.6); ctx.lineTo(tx + sz, ty - sz * 1.6); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(x(xi), y(ex), sz * 0.7, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // 십자선
+    if (hover >= s && hover < e) {
+      ctx.strokeStyle = col.muted; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(Math.round(x(hover)) + 0.5, 0); ctx.lineTo(Math.round(x(hover)) + 0.5, H - padB); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
+  function readout(i) {
+    if (i < 0 || i >= N) return;
+    let txt = `${stamp(D.t[i])} UTC  시 ${fmtP(D.o[i])}  고 ${fmtP(D.h[i])}  저 ${fmtP(D.l[i])}  종 ${fmtP(D.c[i])}`;
+    for (const [kind, side, ei, xi, en, ex, st, tp, r] of D.trades) {
+      if (ei === i && tg[kind].checked) {
+        txt += `   │ ${NAMES[kind]} ${side > 0 ? '매수' : '매도'} 진입 ${fmtP(en)} 손절 ${fmtP(st)} 익절 ${fmtP(tp)} → ${fmtR(r)}`;
+      }
+    }
+    $('readout').textContent = txt;
+  }
+
+  // 이동, 확대
+  let drag = null;
+  const idxAt = (clientX) => { const r = cv.getBoundingClientRect(); return geo ? geo.s + Math.floor((clientX - r.left) / geo.bw) : -1; };
+  cv.addEventListener('pointerdown', (ev) => { drag = {x: ev.clientX, end: view.end}; cv.setPointerCapture(ev.pointerId); cv.classList.add('dragging'); });
+  cv.addEventListener('pointermove', (ev) => {
+    if (drag && geo) { view.end = drag.end - (ev.clientX - drag.x) / geo.bw; }
+    hover = idxAt(ev.clientX); readout(hover); draw();
+  });
+  const stop = () => { drag = null; cv.classList.remove('dragging'); };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
+  cv.addEventListener('pointerleave', () => { hover = -1; draw(); });
+  cv.addEventListener('wheel', (ev) => { ev.preventDefault(); view.count *= ev.deltaY > 0 ? 1.15 : 1 / 1.15; draw(); }, {passive: false});
+  $('b-in').onclick = () => { view.count /= 1.4; draw(); };
+  $('b-out').onclick = () => { view.count *= 1.4; draw(); };
+  $('b-end').onclick = () => { view.end = N; draw(); };
+  pos.oninput = () => { view.end = +pos.value; draw(); };
+
+  const visibleTrades = () => D.trades.filter((t) => tg[t[0]].checked && (!$('tg-sw').checked || t[9])).map((t) => t[2]).sort((a, b) => a - b);
+  const jump = (dir) => {
+    const mid = view.end - view.count / 2, list = visibleTrades();
+    const target = dir > 0 ? list.find((i) => i > mid + 1) : [...list].reverse().find((i) => i < mid - 1);
+    if (target === undefined) return;
+    view.end = target + view.count / 2; hover = target; draw(); readout(target);
+  };
+  $('b-next').onclick = () => jump(1);
+  $('b-prev').onclick = () => jump(-1);
+  for (const id of ['tg-ob', 'tg-fvg', 'tg-fo', 'tg-tr', 'tg-sw']) $(id).addEventListener('change', draw);
+
+  window.addEventListener('resize', draw);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+  if (document.fonts) document.fonts.ready.then(draw);
+  draw();
+})();
+</script>
