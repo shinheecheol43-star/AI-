@@ -164,8 +164,8 @@ def simulate(df: pd.DataFrame, obs: list[OB], exit_mode: str = "lecture", stop_m
             u = min(n - 1, t0 + max_hold)
             legs.append((rest, c[u], TAKER))
         pnl = sum(w * (s * (px - fill) - MAKER * fill - fee * px) for w, px, fee in legs)
-        rows.append({"entry_time": df["time"].iloc[t0], "side": s, "r": pnl / risk,
-                     "three": b.three, **b.tags})
+        rows.append({"entry_time": df["time"].iloc[t0], "exit_time": df["time"].iloc[u], "side": s,
+                     "r": pnl / risk, "stop_pct": risk / fill, "three": b.three, **b.tags})
     return pd.DataFrame(rows)
 
 
