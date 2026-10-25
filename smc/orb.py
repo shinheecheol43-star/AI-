@@ -26,7 +26,8 @@ DAY_LOSS, MAX_LEV = 0.01, 3.0
 END = pd.Timestamp("2026-10-01", tz="UTC")
 
 
-def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH"), start=1000.0) -> dict:
+def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH"), start=1000.0,
+        long=True, short_score=-1, short_close_at_us=False) -> dict:
     D = {s: prepare(s).join(extra(s)) for s in syms}
     idx = D[syms[0]].index
     for s in syms[1:]:
@@ -86,7 +87,7 @@ def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH
                     if S["us_close_bar"][t]:
                         legs = p["legs"]
                         avg = sum(q * e for q, e, _ in legs) / sum(q for q, _, _ in legs)
-                        if side * (c - avg) > 0:
+                        if side * (c - avg) > 0 and not (side < 0 and short_close_at_us):
                             p["stop"] = max(p["stop"], avg) if side > 0 else min(p["stop"], avg)
                             p["overnight"] = True
                         else:
@@ -100,8 +101,8 @@ def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH
                 continue
             if n_today[s] >= (2 if reentry else 1) or np.isnan(or_hi[s]):
                 continue
-            up = a["trend4"][t] > 0 and a["score"][t] >= 1
-            down = short and a["trend4"][t] < 0 and a["score"][t] <= -1
+            up = long and a["trend4"][t] > 0 and a["score"][t] >= 1
+            down = short and a["trend4"][t] < 0 and a["score"][t] <= short_score
             fresh = n_today[s] == 0 or (a["close"][t - 1] <= or_hi[s] if up else a["close"][t - 1] >= or_lo[s])
             side = 1 if (up and c > or_hi[s]) else (-1 if (down and c < or_lo[s]) else 0)
             if side == 0 or not fresh:
