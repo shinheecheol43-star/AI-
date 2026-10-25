@@ -16,7 +16,7 @@ import pandas as pd
 
 from .data import ARCHIVE, load_csv, resample
 from .ob_lecture import find as find_ob
-from .regime import DEFAULT_FUNDING, fetch_funding
+from .regime import DEFAULT_FUNDING, fetch_funding, indicators as daily_indicators
 from .research import MAKER, TAKER
 from .split_entry import portfolio
 
@@ -123,6 +123,8 @@ def main():
     for sym in ("BTC", "ETH"):
         X = load(sym)
         zones = daily_zones(X["tf"]["1D"])
+        # 일봉 국면 점수: 진입 시각 기준 '전날까지' 확정된 값
+        score = daily_indicators(X["tf"]["1D"].set_index("time"))["score"].shift(1)
         sig = signals(X, zones)
         outside = [s for s in sig if s["kind"] == "일봉 존 밖"]
         keep = [s for s in sig if s["kind"] != "일봉 존 밖"]
@@ -141,17 +143,19 @@ def main():
                     r = manage(X, s["k0"], s["entry"], stop, exit_mode, MAKER if s.get("limit") else TAKER)
                     if r:
                         rows.append({"sym": sym, "kind": s["kind"], "tf": s["tf"], "stop": stop_mode, "exit_mode": exit_mode,
-                                     "entry": s["time"], **r})
+                                     "entry": s["time"], "score": score.get(s["time"].floor("D"), np.nan), **r})
     x = pd.DataFrame(rows)
     x.to_pickle(ARCHIVE.parent.parent / "reports" / "mtf_ob.pkl")
-    print(f"\n{'구분':12} {'봉':4} {'손절':4} {'청산':4} | {'설계 n/승률/R':>20} | {'검증 n/승률/R':>20} | {'검증 BTC/ETH':>13} | 검증 $1,000→ 낙폭")
-    for (kind, tf, stop, ex), y in x.groupby(["kind", "tf", "stop", "exit_mode"]):
-        a, b = y[y.entry < SPLIT], y[y.entry >= SPLIT]
-        if len(b) < 20:
-            continue
-        p = portfolio(b.rename(columns={"exit": "exit"}).sort_values("entry"))
-        print(f"{kind:12} {tf:4} {stop:4} {ex:4} | {len(a):5} {(a.r>0).mean()*100:5.1f}% {a.r.mean():+.3f} | {len(b):5} {(b.r>0).mean()*100:5.1f}% {b.r.mean():+.3f}"
-              f" | {b[b.sym=='BTC'].r.mean():+.2f}/{b[b.sym=='ETH'].r.mean():+.2f} | ${p['final']:>8,.0f} {p['mdd']*100:5.1f}%")
+    for flt, fm in (("국면 필터 없음", x.score == x.score), ("일봉 국면 ≥ +1", x.score >= 1), ("일봉 국면 = +3", x.score >= 3)):
+        print(f"\n■ {flt}")
+        print(f"{'구분':12} {'봉':4} {'손절':4} {'청산':4} | {'설계 n/승률/R':>20} | {'검증 n/승률/R':>20} | {'검증 BTC/ETH':>13} | 검증 $1,000→ 낙폭")
+        for (kind, tf, stop, ex), y in x[fm].groupby(["kind", "tf", "stop", "exit_mode"]):
+            a, b = y[y.entry < SPLIT], y[y.entry >= SPLIT]
+            if len(b) < 20 or len(a) < 20 or (kind == "일봉 존 밖" and stop == "넓게"):
+                continue
+            p = portfolio(b.sort_values("entry"))
+            print(f"{kind:12} {tf:4} {stop:4} {ex:4} | {len(a):5} {(a.r>0).mean()*100:5.1f}% {a.r.mean():+.3f} | {len(b):5} {(b.r>0).mean()*100:5.1f}% {b.r.mean():+.3f}"
+                  f" | {b[b.sym=='BTC'].r.mean():+.2f}/{b[b.sym=='ETH'].r.mean():+.2f} | ${p['final']:>8,.0f} {p['mdd']*100:5.1f}%")
 
 
 if __name__ == "__main__":
