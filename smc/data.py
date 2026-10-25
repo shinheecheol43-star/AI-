@@ -145,7 +145,8 @@ def fetch_binance_archive(symbol: str = "BTCUSDT", interval: str = "1h", start: 
         frames.append(pd.DataFrame({"time": t, "open": raw[1], "high": raw[2], "low": raw[3],
                                     "close": raw[4], "volume": raw[5]}))
     df = _normalize(pd.concat(frames, ignore_index=True))
-    df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
+    if have is None or len(df) != len(have):   # 새 캔들이 있을 때만 다시 저장
+        df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
     return df
 
 
