@@ -9,6 +9,7 @@ from __future__ import annotations
 import time as _time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 COLUMNS = ["time", "open", "high", "low", "close", "volume"]
@@ -104,10 +105,56 @@ def drop_unclosed(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     return df[df["time"] + step <= now].reset_index(drop=True)
 
 
+# ---------------------------------------------------------------- 바이낸스 공개 데이터 저장소
+ARCHIVE = Path(__file__).resolve().parent.parent / "data" / "binance"
+
+
+def fetch_binance_archive(symbol: str = "BTCUSDT", interval: str = "1h", start: str = "2017-08",
+                          end: str | None = None, cache: Path = ARCHIVE) -> pd.DataFrame:
+    """data.binance.vision 의 월별 캔들 파일을 받아 합친다. 받은 파일은 cache 에 저장해 재사용.
+
+    국가 차단이 있는 거래소 API 대신 쓰는 과거 데이터용. 인증 필요 없음.
+    """
+    import io
+    import zipfile
+
+    import requests
+
+    end = end or (pd.Timestamp.now(tz="UTC") - pd.offsets.MonthBegin(1)).strftime("%Y-%m")
+    cache.mkdir(parents=True, exist_ok=True)
+    out = cache / f"{symbol}_{interval}.csv.gz"
+    have = load_csv(out) if out.exists() else None
+    months = pd.period_range(start, end, freq="M")
+    if have is not None and len(have):
+        last = have["time"].iloc[-1].tz_localize(None).to_period("M")
+        months = [m for m in months if m >= last]
+    frames = [] if have is None else [have]
+    base = "https://data.binance.vision/data/spot/monthly/klines"
+    for m in months:
+        url = f"{base}/{symbol}/{interval}/{symbol}-{interval}-{m}.zip"
+        r = requests.get(url, timeout=60)
+        if r.status_code == 404:
+            continue
+        r.raise_for_status()
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            raw = pd.read_csv(z.open(z.namelist()[0]), header=None)
+        raw = raw[pd.to_numeric(raw[0], errors="coerce").notna()]  # 헤더 줄이 있는 파일 대비
+        ts = raw[0].astype("int64")
+        unit = np.where(ts > 10**14, "us", "ms")                    # 2025년부터 마이크로초 단위
+        t = pd.to_datetime(ts.where(unit == "ms", ts // 1000), unit="ms", utc=True)
+        frames.append(pd.DataFrame({"time": t, "open": raw[1], "high": raw[2], "low": raw[3],
+                                    "close": raw[4], "volume": raw[5]}))
+    df = _normalize(pd.concat(frames, ignore_index=True))
+    df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
+    return df
+
+
 def load(source: str, symbol: str | None = None, interval: str = "1h", count: int = 1000) -> pd.DataFrame:
-    """source: 'upbit' | 'binance' | CSV 파일 경로."""
+    """source: 'upbit' | 'binance' | 'archive'(바이낸스 공개 저장소) | CSV 파일 경로."""
     if source == "upbit":
         return fetch_upbit(symbol or "KRW-BTC", interval, count)
     if source == "binance":
         return fetch_binance(symbol or "BTCUSDT", interval, count)
+    if source == "archive":
+        return fetch_binance_archive(symbol or "BTCUSDT", interval)
     return load_csv(source)

@@ -124,13 +124,11 @@ def find_fvgs(df: pd.DataFrame, p: Params = Params()) -> list[Zone]:
 def pivots(df: pd.DataFrame, k: int) -> tuple[list[tuple[int, int, float]], list[tuple[int, int, float]]]:
     """스윙 고점/저점. (피벗 인덱스, 확정 인덱스 = 피벗 + k, 가격) 목록."""
     h, l = df["high"].to_numpy(), df["low"].to_numpy()
-    highs, lows = [], []
-    for j in range(k, len(df) - k):
-        win = slice(j - k, j + k + 1)
-        if h[j] == h[win].max():
-            highs.append((j, j + k, h[j]))
-        if l[j] == l[win].min():
-            lows.append((j, j + k, l[j]))
+    # 좌우 k개 창의 최고/최저와 같은 캔들. 양 끝 k개는 창이 모자라 NaN → 제외
+    hmax = pd.Series(h).rolling(2 * k + 1, center=True).max().to_numpy()
+    lmin = pd.Series(l).rolling(2 * k + 1, center=True).min().to_numpy()
+    highs = [(int(j), int(j) + k, float(h[j])) for j in np.flatnonzero(h == hmax)]
+    lows = [(int(j), int(j) + k, float(l[j])) for j in np.flatnonzero(l == lmin)]
     return highs, lows
 
 

@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -52,6 +53,9 @@ def find(df: pd.DataFrame, ratio: float = 2.0, doji: float = 0.10, strict_close:
     a = atr(df)
     n = len(c)
     ph, pl = pivots(df, pivot_k)
+    # 이진 탐색용: side → (피벗 인덱스 목록, 확정 인덱스 목록, 가격 목록). +1은 저점, -1은 고점
+    piv = {1: tuple(map(list, zip(*pl))) if pl else ([], [], []),
+           -1: tuple(map(list, zip(*ph))) if ph else ([], [], [])}
     fvg_mid = {(z.side, z.confirm - 1) for z in find_fvgs(df)}  # FVG 가운데 캔들 = 장대 캔들인가
     out = []
     for i in range(1, n):
@@ -79,13 +83,16 @@ def find(df: pd.DataFrame, ratio: float = 2.0, doji: float = 0.10, strict_close:
         #    (강의 4쪽 그림: 손절 물량을 쓸어낸 장대 음봉 직후에 오더블럭이 생김)
         w0 = max(0, first - 3)
         swept_px = l[w0:i + 1].min() if s > 0 else h[w0:i + 1].max()
-        levels = [lvl for (pj, pc, lvl) in (pl if s > 0 else ph) if pc <= w0 and w0 - pj <= sweep_age]
-        sweep = bool(levels) and ((swept_px < levels[-1]) if s > 0 else (swept_px > levels[-1]))
+        same = piv[s]
+        q = bisect.bisect_right(same[1], w0) - 1          # w0 이전에 확정된 가장 최근 스윙
+        sweep = q >= 0 and w0 - same[0][q] <= sweep_age and (
+            (swept_px < same[2][q]) if s > 0 else (swept_px > same[2][q]))
         # ② 구조물: 장대 캔들이 FVG를 만들었는가 (FVG는 다음 캔들 마감에 확정)
         fvg = (s, i) in fvg_mid
         # 급등 단계의 BOS: 장대 캔들부터 2캔들 안에 직전 스윙 고점(저점)을 종가로 돌파
-        opp = ph if s > 0 else pl
-        last = next((lvl for (pj, pc, lvl) in reversed(opp) if pc <= i), None)
+        opp = piv[-s]
+        q = bisect.bisect_right(opp[1], i) - 1
+        last = opp[2][q] if q >= 0 else None
         bos_at = None
         if last is not None:
             for t in range(i, min(n, i + 3)):

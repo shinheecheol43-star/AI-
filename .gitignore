@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .alert_state.json
 reports/backtest.json
+data/binance/*_5m.csv.gz
