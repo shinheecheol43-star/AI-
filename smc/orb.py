@@ -27,7 +27,7 @@ END = pd.Timestamp("2026-10-01", tz="UTC")
 
 
 def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH"), start=1000.0,
-        long=True, short_score=-1, short_close_at_us=False) -> dict:
+        long=True, short_score=-1, short_close_at_us=False, short_any=False) -> dict:
     D = {s: prepare(s).join(extra(s)) for s in syms}
     idx = D[syms[0]].index
     for s in syms[1:]:
@@ -102,9 +102,11 @@ def run(risk=0.005, pyramid=False, reentry=False, short=False, syms=("BTC", "ETH
             if n_today[s] >= (2 if reentry else 1) or np.isnan(or_hi[s]):
                 continue
             up = long and a["trend4"][t] > 0 and a["score"][t] >= 1
-            down = short and a["trend4"][t] < 0 and a["score"][t] <= short_score
+            down = short and (short_any or (a["trend4"][t] < 0 and a["score"][t] <= short_score))
             fresh = n_today[s] == 0 or (a["close"][t - 1] <= or_hi[s] if up else a["close"][t - 1] >= or_lo[s])
             side = 1 if (up and c > or_hi[s]) else (-1 if (down and c < or_lo[s]) else 0)
+            if side < 0 and n_today[s] > 0 and not reentry:
+                continue
             if side == 0 or not fresh:
                 continue
             risk_px = 2 * a["atr"][t]
