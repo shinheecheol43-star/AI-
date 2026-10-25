@@ -5,3 +5,4 @@ reports/backtest.json
 data/binance/*_5m.csv.gz
 reports/signals.pkl
 reports/mtf_ob.pkl
+reports/short_study.pkl
