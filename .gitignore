@@ -3,3 +3,4 @@ __pycache__/
 .alert_state.json
 reports/backtest.json
 data/binance/*_5m.csv.gz
+reports/signals.pkl
