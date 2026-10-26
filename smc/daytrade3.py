@@ -14,6 +14,10 @@
   night_k    : 오버나잇 들어갈 때 손절을 max(본절, 종가 − 1시간봉 ATR × night_k) 로 조임
   max_days   : 오버나잇 n 번 넘기면 다음 미국장 마감에 무조건 청산 (스윙처럼 길어지지 않게)
   above_ph   : 롱은 돌파 종가가 전일(한국 09:00 기준) 고가 위일 때만 (숏은 전일 저가 아래)
+  reentry    : 그날 같은 코인 재진입. None = 하루 한 번, "win" = 직전 거래가 수익으로 끝났을 때만, "any" = 손익 무관
+               재진입은 종가가 시가 범위 고가 아래로 내려왔다가 다시 돌파할 때 (같은 자리 반복 진입 방지)
+  max_entries: 코인당 하루 최대 진입 횟수 (재진입 포함)
+  day_stop   : "start" = 그날 시작 잔고 대비 −1% 면 중단, "peak" = 그날 최고 손익에서 1% 반납하면 중단
 
 사용:  python -m smc.daytrade3
 """
@@ -33,7 +37,7 @@ LO, END = pd.Timestamp("2018-03-15", tz="UTC"), pd.Timestamp("2026-10-01", tz="U
 
 
 def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_k=3.0, trail_from=None,
-        night_k=None, max_days=None, above_ph=False, short=False, long=True, syms=("BTC", "ETH"), start=1000.0) -> dict:
+        night_k=None, max_days=None, above_ph=False, reentry=None, max_entries=99, day_stop="start", short=False, long=True, syms=("BTC", "ETH"), start=1000.0) -> dict:
     D = {s: prepare(s).join(extra(s)) for s in syms}
     idx = D[syms[0]].index
     for s in syms[1:]:
@@ -48,24 +52,27 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
     pos = {s: None for s in syms}
     bal, day, day_start, day_pnl = start, None, start, 0.0
     or_hi, or_lo = {s: np.nan for s in syms}, {s: np.nan for s in syms}
-    done = {s: False for s in syms}
+    n_today, last_win = {s: 0 for s in syms}, {s: False for s in syms}
+    day_peak = 0.0
     trades, curve = [], []
 
     def close(s, p, px, t, why):
-        nonlocal bal, day_pnl
+        nonlocal bal, day_pnl, day_peak
         side = p["side"]
         pnl = p["qty"] * (side * (px - p["entry"]) - TAKER * (p["entry"] + px)) - p["fund"]
         bal += pnl
         day_pnl += pnl
+        day_peak = max(day_peak, day_pnl)
+        last_win[s] = pnl > 0
         trades.append({"sym": s, "side": side, "entry_time": p["time"], "exit_time": idx[t], "pnl": pnl,
-                       "r": pnl / p["risk_usd"], "stop_pct": p["risk_px"] / p["entry"], "mfe": p["mfe"], "overnight": p["nights"] > 0, "why": why})
+                       "r": pnl / p["risk_usd"], "nth": p["nth"], "stop_pct": p["risk_px"] / p["entry"], "mfe": p["mfe"], "overnight": p["nights"] > 0, "why": why})
         curve.append((idx[t], bal))
         pos[s] = None
 
     for t in range(1, len(idx)):
         if S["tday"][t] != day:
-            day, day_start, day_pnl = S["tday"][t], bal, 0.0
-            done = {s: False for s in syms}
+            day, day_start, day_pnl, day_peak = S["tday"][t], bal, 0.0, 0.0
+            n_today = {s: 0 for s in syms}
         for s in syms:
             a = A[s]
             o, h, l, c = a["open"][t], a["high"][t], a["low"][t], a["close"][t]
@@ -106,8 +113,14 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
                 or_hi[s], or_lo[s] = h, l
             elif S["us_or_end"][t]:
                 or_hi[s], or_lo[s] = max(or_hi[s], h), min(or_lo[s], l)
-            if day_pnl <= -DAY_LOSS * day_start or pos[s] is not None or done[s]:
+            floor = (day_peak if day_stop == "peak" else 0.0) - DAY_LOSS * day_start
+            if day_pnl <= floor or pos[s] is not None or n_today[s] >= max_entries:
                 continue
+            if n_today[s] > 0:
+                if reentry is None or (reentry == "win" and not last_win[s]):
+                    continue
+                if not (a["close"][t - 1] <= or_hi[s] if long else a["close"][t - 1] >= or_lo[s]):
+                    continue
             if not S["entry_ok"][t] or not S["after_or"][t] or np.isnan(or_hi[s]) or not np.isfinite(a["atr"][t]):
                 continue
             up = long and a["trend4"][t] > 0 and a["score"][t] >= 1 and c > or_hi[s]
@@ -125,12 +138,12 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
             q = bal * risk / risk_px
             expo = sum(r["qty"] * A[r["sym"]]["close"][t] for r in pos.values() if r)
             q = min(q, max(0.0, (MAX_LEV * bal - expo) / c))
-            done[s] = True
+            n_today[s] += 1
             if q <= 0:
                 continue
             pos[s] = {"sym": s, "side": side, "entry": c, "qty": q, "stop": c - side * risk_px, "ext": c,
                       "risk_px": risk_px, "risk_usd": q * risk_px, "time": idx[t], "fund": 0.0, "bars": 0,
-                      "nights": 0, "mfe": 0.0}
+                      "nights": 0, "mfe": 0.0, "nth": n_today[s]}
     return {"trades": pd.DataFrame(trades),
             "curve": pd.Series([b for _, b in curve], index=pd.DatetimeIndex([t for t, _ in curve]), dtype=float)}
 
@@ -194,6 +207,18 @@ COMBOS = {
     "전일고점 + 추적 5 + 숏": {"above_ph": True, "trail_k": 5.0, "short": True},
     "숏(−3)만, 기준 청산": {"long": False, "short": True},
     "숏(−3)만, 전일저점 + 추적 5": {"long": False, "short": True, "above_ph": True, "trail_k": 5.0},
+}
+
+
+REENTRY = {
+    "하루 한 번 (현재)": {"above_ph": True},
+    "수익 후 재진입 1번": {"above_ph": True, "reentry": "win", "max_entries": 2},
+    "수익 후 계속 재진입": {"above_ph": True, "reentry": "win"},
+    "손익 무관 재진입 1번": {"above_ph": True, "reentry": "any", "max_entries": 2},
+    "손익 무관 계속 재진입": {"above_ph": True, "reentry": "any"},
+    "수익 후 계속, 고점 대비 −1% 중단": {"above_ph": True, "reentry": "win", "day_stop": "peak"},
+    "손익 무관 계속, 고점 대비 −1% 중단": {"above_ph": True, "reentry": "any", "day_stop": "peak"},
+    "수익 후 계속, 재진입은 전일고점 무시": {"above_ph": False, "reentry": "win"},
 }
 
 
