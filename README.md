@@ -90,6 +90,15 @@ python -m smc.signal_bot --source archive --once  # 공개 저장소 데이터�
 텔레그램 설정은 위 ② 와 같습니다 (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`). 잔고는 `BOT_BALANCE_USDT` 환경변수로도 넣을 수 있습니다.
 토큰은 환경변수에만 넣고 코드·채팅·깃에 남기지 마세요.
 
+### 아침 브리핑과 공포·탐욕 지수
+
+신호 봇은 매일 오전 8시 이후 첫 확인 때 텔레그램으로 아침 브리핑을 보냅니다.
+코인 공포·탐욕 지수(alternative.me), 미국 주식 공포·탐욕 지수(CNN)와 세부 지표 7개, BTC·ETH 가격·국면, 진행 중 신호가 들어 있습니다.
+
+```bash
+python -m smc.fng_study      # 공포·탐욕 지수로 스윙 타점을 거를 수 있는지 연구 → reports/fng_study.txt
+```
+
 ## ③ 차트
 
 ```bash

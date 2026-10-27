@@ -7,6 +7,7 @@
   진입  : 전략, 방향, 근거(✅/❌), 근거 일치도 10점, 진입가·손절가·익절 참고가(1R·2R·3R와 과거 도달 비율), 권장 수량
   손절 상향 : 추적 손절이 0.3R 이상 유리하게 움직였을 때 새 손절가
   청산  : 손절선에 닿아 끝났을 때 결과(R)
+  아침 브리핑 : 매일 오전 8시 이후 첫 확인 때 코인·미국 주식 공포·탐욕 지수, BTC·ETH 상태, 진행 중 신호 (smc.sentiment)
 처음 켤 때 이미 진행 중인 신호는 '진행 중(신규 진입 비추천)'으로 한 번 정리해서 보낸다.
 
 근거 일치도(10점) = 아래 5개 근거 중 신호 방향과 맞는 개수 × 2
@@ -34,13 +35,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import daytrade, daytrade2, system as S
+from . import daytrade, daytrade2, sentiment, system as S
 from .alert import send
 from .data import extend_with_api, extend_with_daily, fetch_binance_archive
 
 STATE = Path(".signal_bot_state.json")
 FRESH = {"데이 롱": pd.Timedelta("30min")}           # 이 시간 안에 알면 '지금 신호', 넘으면 '늦은 신호'
 FRESH_SWING = pd.Timedelta("5h")
+BRIEF_HOUR = 8                                       # 아침 브리핑 시각 (한국시간, 이 시각 이후 첫 확인 때)
 STOP_STEP = 0.3                                      # 손절 상향 알림 기준 (R)
 EV_NAMES = {1: ["4h 200EMA 위", "일봉 국면 +3", "4h RSI > 63", "20EMA 이격 > 1.43 ATR", "펀딩비 쏠림 없음(하위 1/3)"],
             -1: ["4h 200EMA 아래", "일봉 국면 −3", "4h RSI < 37", "20EMA 이격 < −1.43 ATR", "롱 쏠림(펀딩비 상위 1/3)"]}
@@ -79,6 +81,8 @@ def snapshot(syms, source: str, day: bool = False) -> dict:
     Xs = {s: S.context(s) for s in syms}
     rows = [pd.concat([S.swing_trades(X) for X in Xs.values()], ignore_index=True)]
     h1 = {s: fetch_binance_archive(s + "USDT", "1h") for s in syms}
+    for s in syms:
+        Xs[s]["h1"] = h1[s]
     last = {s: h1[s].close.iloc[-1] for s in syms}
     asof = min(h1[s].time.iloc[-1] for s in syms) + pd.Timedelta("1h")
     day_open = {}
@@ -194,6 +198,10 @@ def check(syms, source: str, state: dict, balance: float | None, day: bool = Fal
         if k in closed.index and not bool(closed.loc[k, "open"]):
             msgs.append(exit_msg(closed.loc[[k]].reset_index().iloc[0]))
         del alerted[k]
+    today = pd.Timestamp.now(tz="Asia/Seoul")
+    if state.get("brief") != today.strftime("%Y-%m-%d") and today.hour >= BRIEF_HOUR:     # 하루 한 번 아침 브리핑
+        msgs.append(sentiment.briefing(snap, today))
+        state["brief"] = today.strftime("%Y-%m-%d")
     state["started"], state["asof"] = True, str(now)
     return msgs
 
