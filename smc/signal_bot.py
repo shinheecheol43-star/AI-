@@ -203,7 +203,7 @@ def main():
     ap.add_argument("--syms", default=",".join(S.SYMS))
     ap.add_argument("--source", default="api", help="api (바이낸스 실시간) | archive (공개 저장소, 하루 늦음)")
     ap.add_argument("--once", action="store_true")
-    ap.add_argument("--balance", type=float, default=float(os.environ.get("BOT_BALANCE_USDT", 0)) or None)
+    ap.add_argument("--balance", type=float, default=float(os.environ.get("BOT_BALANCE_USDT") or 0) or None)
     ap.add_argument("--state", default=str(STATE))
     ap.add_argument("--with-day", action="store_true", help="데이 롱 신호도 알림 (15분마다 확인)")
     a = ap.parse_args()

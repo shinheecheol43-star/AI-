@@ -1,0 +1,16 @@
+[Unit]
+Description=BTC·ETH 스윙 신호 알림 봇
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__REPO__
+EnvironmentFile=__ENV__
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__REPO__/.venv/bin/python -m smc.signal_bot
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
