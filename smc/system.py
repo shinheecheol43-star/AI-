@@ -1,6 +1,6 @@
-"""비트코인 롱·숏 통합 매매 프로그램: 백테스트와 '지금 상태' 점검을 같은 규칙·같은 코드로.
+"""코인 롱·숏 통합 매매 프로그램 (기본 BTC + ETH 한 계좌): 백테스트와 '지금 상태' 점검을 같은 규칙·같은 코드로.
 
-전략 (모두 BTCUSDT, 규칙은 연구 단계에서 고정한 값 그대로)
+전략 (코인마다 같은 규칙, 연구 단계에서 고정한 값 그대로)
   스윙 롱 : 4시간봉 종가가 직전 20봉 고가를 처음 돌파 + 근거 5개 중 4개 이상
             (4h 200EMA 위, 전날 일봉 국면 +3, 4h RSI > 63.0, 20EMA 이격 > ATR × 1.43, 전날 펀딩비 순위 하위 1/3)
   숏 S5   : 4시간봉 종가가 가장 최근 확정된 일봉 스윙 저점(좌우 5일)을 처음 이탈
@@ -8,14 +8,15 @@
   데이 롱 : 4h 200EMA 위 + 전날 국면 ≥ +1 인 날, 미국장 첫 30분 고가를 15분봉 종가로 돌파하고 전일 고가 위일 때
             (미국장 마감에 손실이면 청산, 수익이면 본절 올려 보유. 하루 −1% 면 그날 중단)
   스윙 공통: 시장가 진입, 손절 ATR(4h) × 2, 추적 손절 최고가(숏은 최저가) ∓ ATR × 3, 최대 120봉,
-            동시 보유: 스윙 롱은 2개까지(새 강한 돌파 신호일 때만), 숏 S5·S2 는 각 1개 (불타기 없음)
+            동시 보유(코인별): 스윙 롱은 2개까지(새 강한 돌파 신호일 때만), 숏 S5·S2 는 각 1개 (불타기 없음)
 계좌
   거래당 리스크 RISK (스윙 롱·S5·데이 0.5%, S2 0.25%), 레버리지 합계 3배 이하, 슬리피지 진입·청산 각 SLIP,
   비상 브레이크: 실현 잔고가 최고점 대비 −15% 면 리스크 절반, −7% 까지 회복하면 해제 (매매 중지는 하지 않음)
 
-사용:  python -m smc.btc_system            # 데이터 갱신 + 백테스트 + 지금 상태
-       python -m smc.btc_system --now      # 지금 상태만
-       python -m smc.btc_system --scale 2 --lev 5   # 리스크 2배, 레버리지 상한 5배로 백테스트
+사용:  python -m smc.system                 # BTC + ETH: 데이터 갱신 + 백테스트 + 지금 상태
+       python -m smc.system --now           # 지금 상태만
+       python -m smc.system --syms BTC      # 비트코인만
+       python -m smc.system --scale 2 --lev 5   # 리스크 2배, 레버리지 상한 5배로 백테스트
 """
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ from .research import TAKER, rsi
 from .research_report import SPLIT
 from .swing_ls import describe
 
-SYM = "BTC"
+SYMS = ("BTC", "ETH")
 RISK = {"스윙 롱": 0.005, "숏 S5": 0.005, "숏 S2": 0.0025, "데이 롱": 0.005}   # S2 는 BTC 검증 구간 약해 절반
 SLIP = 0.0005
 MAX_LEV = 3.0                                     # 열린 포지션 명목 합계 / 잔고 상한
@@ -43,20 +44,20 @@ MAX_OPEN = {"스윙 롱": 2, "숏 S5": 1, "숏 S2": 1}   # 동시 보유 한도 
 Q_RSI, Q_D20, Q_FUND = 63.0, 1.43, 1 / 3        # 설계 구간(2018–2021) 4h 롱 신호 분위수로 고정한 값
 
 
-def refresh() -> pd.Timestamp:
+def refresh(sym: str) -> pd.Timestamp:
     for iv in ("1h", "5m"):
-        fetch_binance_archive(SYM + "USDT", iv)
-        df = extend_with_daily(SYM + "USDT", iv)
+        fetch_binance_archive(sym + "USDT", iv)
+        df = extend_with_daily(sym + "USDT", iv)
     return df.time.iloc[-1]
 
 
 # ---------------------------------------------------------------- 스윙 신호
-def context() -> dict:
-    X = short_study.context(SYM)                    # S5·S2 판단에 쓰는 값 + 4h 가격·ATR·EMA·펀딩
+def context(sym: str) -> dict:
+    X = short_study.context(sym)                    # S5·S2 판단에 쓰는 값 + 4h 가격·ATR·EMA·펀딩
     d4 = X["df"]
-    dD = resample(fetch_binance_archive(SYM + "USDT", "1h"), "1D")
+    dD = resample(fetch_binance_archive(sym + "USDT", "1h"), "1D")
     day = d4.time.dt.floor("D")
-    fund = fetch_funding(SYM + "USDT")
+    fund = fetch_funding(sym + "USDT")
     frank = fund.rolling(90, min_periods=30).rank(pct=True).shift(1)
     frank = frank.reindex(pd.DatetimeIndex(day.unique()).union(frank.index)).ffill()   # 이번 달은 마지막 값 유지
     X["rsi"] = rsi(d4.close).to_numpy()
@@ -64,7 +65,7 @@ def context() -> dict:
     X["frank"] = frank.reindex(day).to_numpy()
     X["hh20"] = d4.high.rolling(20).max().shift(1).to_numpy()
     X["daily"] = daily_indicators(dD.set_index("time"))
-    X["dD"] = dD
+    X["dD"], X["sym"] = dD, sym
     return X
 
 
@@ -121,37 +122,40 @@ def swing_trades(X: dict, max_open: dict | None = None) -> pd.DataFrame:
                 continue
             r = trail(X, i, side)
             ends.append(r["exit_t"] if not r["open"] else n)
-            rows.append({"src": name, "side": side, "entry": times.iat[i] + pd.Timedelta("4h"),
+            rows.append({"symbol": X["sym"], "src": name, "side": side, "entry": times.iat[i] + pd.Timedelta("4h"),
                          "exit": times.iat[r["exit_t"]] + pd.Timedelta("4h"), **r})
     return pd.DataFrame(rows)
 
 
-def day_trades() -> tuple[pd.DataFrame, dict]:
-    res = daytrade3.run(above_ph=True, syms=(SYM,))
+def day_trades(syms) -> tuple[pd.DataFrame, dict]:
+    res = daytrade3.run(above_ph=True, syms=tuple(syms))        # 코인들이 한 계좌·하루 손실 한도를 공유
     t = res["trades"]
-    return (pd.DataFrame({"src": "데이 롱", "side": t.side, "entry": t.entry_time, "exit": t.exit_time, "r": t.r,
+    return (pd.DataFrame({"symbol": t.sym, "src": "데이 롱", "side": t.side, "entry": t.entry_time, "exit": t.exit_time, "r": t.r,
                           "stop_pct": t.stop_pct, "open": False}), res["open"])
 
 
 # ---------------------------------------------------------------- 백테스트
-def backtest(sw: pd.DataFrame, dy: pd.DataFrame) -> None:
+def backtest(sw: pd.DataFrame, dy: pd.DataFrame, syms) -> None:
     x = pd.concat([sw, dy], ignore_index=True)
     x = x.assign(risk=x.src.map(RISK), r=x.r - 2 * SLIP / x.stop_pct)
     x = x[~x.open]                                   # 진행 중인 거래는 손익 미확정
     yrs = (pd.Timestamp("2026-10-01", tz="UTC") - pd.Timestamp("2018-03-15", tz="UTC")).days / 365.25
     print(f"■ 전략별 (슬리피지 {SLIP*100:.2f}% 포함)")
-    print(f"{'':8} {'거래':>5} {'연':>4} {'승률':>6} {'평균R':>7} {'설계R':>7} {'검증R':>7} {'평균익':>6} {'평균손':>6}")
-    for name in RISK:
-        y = x[x.src == name]
-        print(f"{name:8} {len(y):5} {len(y)/yrs:4.0f} {(y.r>0).mean()*100:5.1f}% {y.r.mean():+.3f} {y[y.entry<SPLIT].r.mean():+.3f}"
+    print(f"{'':12} {'거래':>5} {'연':>4} {'승률':>6} {'평균R':>7} {'설계R':>7} {'검증R':>7} {'평균익':>6} {'평균손':>6}")
+    for name, sym in ((n, s) for n in RISK for s in syms):
+        y = x[(x.src == name) & (x.symbol == sym)]
+        print(f"{name:8} {sym:3} {len(y):5} {len(y)/yrs:4.0f} {(y.r>0).mean()*100:5.1f}% {y.r.mean():+.3f} {y[y.entry<SPLIT].r.mean():+.3f}"
               f" {y[y.entry>=SPLIT].r.mean():+.3f} {y[y.r>0].r.mean():+6.2f} {y[y.r<=0].r.mean():+6.2f}")
-    print("\n■ 한 계좌 ($1,000, 복리, 레버리지 ≤ 3배)")
+    print(f"\n■ 한 계좌 ($1,000, 복리, 레버리지 ≤ {MAX_LEV:g}배)")
     print(f"{'구성':22} | {'연평균':>7} {'낙폭':>7} {'효율':>5} | {'설계':>7} {'검증':>7} {'검증낙폭':>7} | {'최장회복':>6} | $1,000→ | "
           + " ".join(f"{y:>5}" for y in range(2018, 2027)))
-    sets = {"롱만 (스윙 + 데이)": ["스윙 롱", "데이 롱"], "숏만 (S5 + S2)": ["숏 S5", "숏 S2"], "스윙만 (롱 + 숏)": ["스윙 롱", "숏 S5", "숏 S2"],
-            "전체": list(RISK), "전체 + 비상 브레이크": list(RISK)}
-    for name, srcs in sets.items():
-        cv, _ = account_curve(x[x.src.isin(srcs)], max_lev=MAX_LEV, **(BRAKE if "브레이크" in name else {}))
+    allc = (list(RISK), list(syms))
+    sets = {f"{s} 전체": (list(RISK), [s]) for s in syms}
+    sets.update({"롱만 (스윙 + 데이)": (["스윙 롱", "데이 롱"], list(syms)), "숏만 (S5 + S2)": (["숏 S5", "숏 S2"], list(syms)),
+                 "스윙만 (롱 + 숏)": (["스윙 롱", "숏 S5", "숏 S2"], list(syms)), "전체": allc, "전체 + 비상 브레이크": allc})
+    for name, (srcs, ss) in sets.items():
+        y = x[x.src.isin(srcs) & x.symbol.isin(ss)]
+        cv, _ = account_curve(y, max_lev=MAX_LEV, **(BRAKE if "브레이크" in name else {}))
         d = describe(cv)
         f, a, b = d["full"], d["design"], d["test"]
         print(f"{name:22} | {f[0]*100:+6.1f}% {f[1]*100:6.1f}% {f[0]/-f[1]:5.2f} | {a[0]*100:+6.1f}% {b[0]*100:+6.1f}% {b[1]*100:6.1f}% |"
@@ -160,16 +164,19 @@ def backtest(sw: pd.DataFrame, dy: pd.DataFrame) -> None:
     peak = max(np.cumsum([r for _, r in ev]))
     print(f"  동시에 걸린 리스크 최대 {peak*100:.1f}% (모든 손절이 한꺼번에 맞을 때의 손실)")
     m = x.assign(y=x.entry.dt.year).groupby(["y", "src"]).size().unstack(fill_value=0)[list(RISK)]
+    m["합계"] = m.sum(axis=1)
     print("\n■ 연도별 거래 수\n" + m.to_string())
 
 
 # ---------------------------------------------------------------- 지금 상태
 def now(X: dict, sw: pd.DataFrame, day_open: dict) -> None:
+    sw = sw[sw.symbol == X["sym"]]
+    day_open = {s: p for s, p in day_open.items() if s == X["sym"]}
     d4, i = X["df"], len(X["c"]) - 1
     last = d4.time.iat[i] + pd.Timedelta("4h")
     px = X["c"][i]
     kst = last.tz_convert("Asia/Seoul")
-    print(f"\n■ 지금 상태 (마지막 4시간봉 마감 {kst:%Y-%m-%d %H:%M} 한국시간, 종가 {px:,.0f})")
+    print(f"\n■ {X['sym']} 지금 상태 (마지막 4시간봉 마감 {kst:%Y-%m-%d %H:%M} 한국시간, 종가 {px:,.0f})")
     daily = X["daily"]
     print(f"  일봉 국면 점수 {daily.score.iloc[-1]:+.0f} (전날 기준 {X['score'][i]:+.0f}) | 4h EMA20 {X['e20'][i]:,.0f} · EMA50 {X['e50'][i]:,.0f}"
           f" · EMA200 {X['e200'][i]:,.0f} | ATR {X['atr'][i]:,.0f} ({X['atr'][i]/px*100:.2f}%)")
@@ -211,18 +218,22 @@ def main():
     ap.add_argument("--no-refresh", action="store_true")
     ap.add_argument("--scale", type=float, default=1.0, help="모든 리스크에 곱할 배수 (예: 2 = 롱 1%%)")
     ap.add_argument("--lev", type=float, default=MAX_LEV, help="레버리지 합계 상한")
+    ap.add_argument("--syms", default=",".join(SYMS), help="예: BTC,ETH")
     a = ap.parse_args()
+    syms = a.syms.split(",")
     globals()["MAX_LEV"] = a.lev
     for k in RISK:
         RISK[k] *= a.scale
     if not a.no_refresh:
-        print(f"데이터 갱신: 마지막 캔들 {refresh():%Y-%m-%d %H:%M} UTC ({ARCHIVE})")
-    X = context()
-    sw = swing_trades(X)
-    dy, day_open = day_trades()
+        for s in syms:
+            print(f"데이터 갱신 {s}: 마지막 캔들 {refresh(s):%Y-%m-%d %H:%M} UTC ({ARCHIVE})")
+    Xs = {s: context(s) for s in syms}
+    sw = pd.concat([swing_trades(X) for X in Xs.values()], ignore_index=True)
+    dy, day_open = day_trades(syms)
     if not a.now:
-        backtest(sw, dy)
-    now(X, sw, day_open)
+        backtest(sw, dy, syms)
+    for X in Xs.values():
+        now(X, sw, day_open)
 
 
 if __name__ == "__main__":
