@@ -69,10 +69,11 @@ python -m smc.alert --replay --last 200      # 인터넷 없이 과거 데이터
 
 ## ②-1 매매 신호 알림 봇 (통합 전략)
 
-`smc.system` 과 같은 규칙·같은 코드로 BTC·ETH 의 스윙 롱, 숏 S5, 숏 S2, 데이 롱 신호를 알려 줍니다. 주문은 넣지 않습니다.
+`smc.system` 과 같은 규칙·같은 코드로 BTC·ETH 의 스윙 신호(스윙 롱, 숏 S5, 숏 S2)를 알려 줍니다. 주문은 넣지 않습니다.
+데이 롱은 15분봉·미국장 시간대 매매라 알림을 보고 따라가기 어려워 기본에서 뺐습니다(`--with-day` 로 포함 가능).
 
 ```bash
-python -m smc.signal_bot                          # 바이낸스 API 로 15분마다 확인 (내 PC·서버에서)
+python -m smc.signal_bot                          # 스윙만, 바이낸스 API 로 1시간마다 확인 (내 PC·서버에서)
 python -m smc.signal_bot --balance 5000           # 잔고(USDT)를 넣으면 권장 수량까지 계산
 python -m smc.signal_bot --source archive --once  # 공개 저장소 데이터로 한 번 시험 (하루 늦은 데이터)
 ```

@@ -1,5 +1,8 @@
 """매매 신호 알림 봇: smc.system 과 같은 규칙·같은 코드로 신호를 찾아 알려 준다. 주문은 넣지 않는다.
 
+기본은 스윙 전략(스윙 롱, 숏 S5, 숏 S2)만 알린다. 4시간봉 마감 기준이라 1시간마다 확인한다.
+데이 롱(15분봉, 미국장 시간대)은 알림을 보고 사람이 따라가기 어려워 --with-day 를 줄 때만 포함한다.
+
 알림 종류
   진입  : 전략, 방향, 근거(✅/❌), 근거 일치도 10점, 진입가·손절가·익절 참고가(1R·2R·3R와 과거 도달 비율), 권장 수량
   손절 상향 : 추적 손절이 0.3R 이상 유리하게 움직였을 때 새 손절가
@@ -15,7 +18,8 @@
 텔레그램으로 받으려면 환경변수 TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 를 설정한다(없으면 화면에만 출력).
 권장 수량을 보려면 --balance 또는 환경변수 BOT_BALANCE_USDT 에 계좌 잔고(USDT)를 넣는다.
 
-사용:  python -m smc.signal_bot                    # 바이낸스 API 로 15분마다 확인 (내 PC·서버에서)
+사용:  python -m smc.signal_bot                    # 스윙만, 바이낸스 API 로 1시간마다 확인 (내 PC·서버에서)
+       python -m smc.signal_bot --with-day         # 데이 롱도 포함, 15분마다 확인
        python -m smc.signal_bot --once            # 한 번만 확인하고 종료
        python -m smc.signal_bot --source archive --once   # 공개 저장소 데이터로 시험 (하루 늦음)
 """
@@ -32,7 +36,7 @@ import pandas as pd
 
 from . import daytrade, daytrade2, system as S
 from .alert import send
-from .data import extend_with_api
+from .data import extend_with_api, extend_with_daily, fetch_binance_archive
 
 STATE = Path(".signal_bot_state.json")
 FRESH = {"데이 롱": pd.Timedelta("30min")}           # 이 시간 안에 알면 '지금 신호', 넘으면 '늦은 신호'
@@ -64,26 +68,33 @@ def evidence(X: dict, t: pd.Timestamp, side: int) -> list[bool]:
 
 
 # ---------------------------------------------------------------- 상태 계산
-def snapshot(syms, source: str) -> dict:
+def snapshot(syms, source: str, day: bool = False) -> dict:
+    ivs = ("1h", "5m") if day else ("1h",)
     for s in syms:
-        S.refresh(s)
-        if source == "api":
-            for iv in ("1h", "5m"):
+        for iv in ivs:
+            fetch_binance_archive(s + "USDT", iv)
+            extend_with_daily(s + "USDT", iv)
+            if source == "api":
                 extend_with_api(s + "USDT", iv)
-    daytrade.prepare.cache_clear()                   # 봇이 계속 돌 때 새 캔들을 다시 읽도록
-    daytrade2.extra.cache_clear()
     Xs = {s: S.context(s) for s in syms}
-    sw = pd.concat([S.swing_trades(X) for X in Xs.values()], ignore_index=True)
-    dy, day_open = S.day_trades(syms)
-    rows = [sw, dy]
+    rows = [pd.concat([S.swing_trades(X) for X in Xs.values()], ignore_index=True)]
+    h1 = {s: fetch_binance_archive(s + "USDT", "1h") for s in syms}
+    last = {s: h1[s].close.iloc[-1] for s in syms}
+    asof = min(h1[s].time.iloc[-1] for s in syms) + pd.Timedelta("1h")
+    day_open = {}
+    if day:
+        daytrade.prepare.cache_clear()               # 봇이 계속 돌 때 새 캔들을 다시 읽도록
+        daytrade2.extra.cache_clear()
+        dy, day_open = S.day_trades(syms)
+        rows.append(dy)
+        last = {s: daytrade.prepare(s).close.iloc[-1] for s in syms}
+        asof = min(daytrade.prepare(s).index[-1] for s in syms) + pd.Timedelta("15min")
     for s, p in day_open.items():                    # 진행 중인 데이 롱
         rows.append(pd.DataFrame([{"symbol": s, "src": "데이 롱", "side": p["side"], "entry": p["time"] + pd.Timedelta("15min"),
                                    "exit": pd.NaT, "r": np.nan, "stop_pct": p["risk_px"] / p["entry"], "open": True,
                                    "p0": p["entry"], "stop": p["stop"], "mfe": p["mfe"]}]))
     x = pd.concat(rows, ignore_index=True)
     x["key"] = x.symbol + "|" + x.src + "|" + x.entry.astype(str)
-    last = {s: daytrade.prepare(s).close.iloc[-1] for s in syms}
-    asof = min(daytrade.prepare(s).index[-1] for s in syms) + pd.Timedelta("15min")
     return {"x": x, "Xs": Xs, "last": last, "asof": asof}
 
 
@@ -151,14 +162,14 @@ def exit_msg(t) -> str:
 
 
 # ---------------------------------------------------------------- 한 번 확인
-def check(syms, source: str, state: dict, balance: float | None) -> list[str]:
-    snap = snapshot(syms, source)
+def check(syms, source: str, state: dict, balance: float | None, day: bool = False) -> list[str]:
+    snap = snapshot(syms, source, day)
     x, hist, now = snap["x"], history(snap["x"]), snap["asof"]
     opened = x[x.open.astype(bool)]
     msgs = []
     first = not state.get("started")
     if first:
-        lines = [f"🤖 신호 봇 시작 ({', '.join(syms)}, 데이터 {kst(now)} 한국시간까지)"]
+        lines = [f"🤖 신호 봇 시작 ({', '.join(syms)} · {'스윙 + 데이 롱' if day else '스윙 롱·숏 S5·숏 S2'}, 데이터 {kst(now)} 한국시간까지)"]
         if opened.empty:
             lines.append("진행 중인 신호 없음")
         for t in opened.itertuples():
@@ -194,19 +205,21 @@ def main():
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--balance", type=float, default=float(os.environ.get("BOT_BALANCE_USDT", 0)) or None)
     ap.add_argument("--state", default=str(STATE))
+    ap.add_argument("--with-day", action="store_true", help="데이 롱 신호도 알림 (15분마다 확인)")
     a = ap.parse_args()
     syms, path = a.syms.split(","), Path(a.state)
     state = json.loads(path.read_text()) if path.exists() else {}
     while True:
         try:
-            for m in check(syms, a.source, state, a.balance):
+            for m in check(syms, a.source, state, a.balance, a.with_day):
                 send(m)
             path.write_text(json.dumps(state, ensure_ascii=False))
         except Exception as e:                       # 네트워크 오류 등으로 봇이 죽지 않게
             print(f"[오류, 다음 주기에 재시도] {e}", flush=True)
         if a.once:
             break
-        nxt = pd.Timestamp.now(tz="UTC").floor("15min") + pd.Timedelta("15min") + pd.Timedelta("40s")
+        step = pd.Timedelta("15min" if a.with_day else "1h")
+        nxt = pd.Timestamp.now(tz="UTC").floor(step) + step + pd.Timedelta("40s")
         time.sleep(max(30.0, (nxt - pd.Timestamp.now(tz="UTC")).total_seconds()))
 
 
