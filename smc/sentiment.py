@@ -48,7 +48,13 @@ def cnn_fng(start: str = "2018-01-01") -> dict:
     """CNN 공포·탐욕 지수: 지금 값, 비교 값(1주·1달·1년 전), 세부 지표 7개, 과거 일별 값."""
     import requests
 
-    r = requests.get(f"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{start}", headers=UA, timeout=20)
+    # 너무 오래된 시작일은 서버 오류(500)가 나서, 차례로 늦춰 가며 시도한다 (마지막은 날짜 없이 = 최근 1년쯤)
+    base = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+    one_year = (pd.Timestamp.now() - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
+    for url in [f"{base}/{d}" for d in dict.fromkeys([start, "2021-01-01", "2022-01-01", one_year])] + [base]:
+        r = requests.get(url, headers=UA, timeout=20)
+        if r.ok or r.status_code not in (400, 404, 500):
+            break
     r.raise_for_status()
     j = r.json()
     hist = pd.Series({pd.Timestamp(int(p["x"]), unit="ms", tz="UTC").normalize(): float(p["y"])
