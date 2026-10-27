@@ -71,6 +71,40 @@ def load(name: str) -> pd.Series:
     return pd.read_csv(DIR / f"{name}.csv", index_col=0, parse_dates=True).iloc[:, 0]
 
 
+# ---------------------------------------------------------------- 진입 알림용 참고 문구
+# fng_study 결과 (2026-10 실행, BTC+ETH 스윙). 규칙에는 쓰지 않고 알림에 참고로만 보여 준다.
+CAUTION = {
+    "long_cnn_greed": "과거 미국 주식 극단적 탐욕 때 스윙 롱 25건 평균 −0.40R (2022년 이후, 표본 적음)",
+    "short_crypto_fear": "과거 코인 극단적 공포 때 숏 S5·S2 188건 평균 0R 근처 (급반등 위험)",
+}
+
+
+def mood() -> dict:
+    """지금 두 지수 값 (못 받으면 그 값은 빠진다)."""
+    out = {}
+    try:
+        out["crypto"] = float(crypto_fng(2).iloc[-1])
+    except Exception:
+        pass
+    try:
+        out["cnn"] = cnn_fng((pd.Timestamp.now() - pd.Timedelta(days=10)).strftime("%Y-%m-%d"))["score"]
+    except Exception:
+        pass
+    return out
+
+
+def mood_line(m: dict, side: int) -> list[str]:
+    if not m:
+        return ["시장 심리: 공포·탐욕 지수를 가져오지 못함"]
+    parts = [f"{n} {m[k]:.0f} {label(m[k])}" for k, n in (("crypto", "코인"), ("cnn", "미국 주식")) if k in m]
+    lines = ["시장 심리: " + " · ".join(parts)]
+    if side > 0 and m.get("cnn", 0) > 75.5:
+        lines.append("⚠️ " + CAUTION["long_cnn_greed"])
+    if side < 0 and m.get("crypto", 100) < 24.5:
+        lines.append("⚠️ " + CAUTION["short_crypto_fear"])
+    return lines
+
+
 # ---------------------------------------------------------------- 아침 브리핑
 def _ago(s: pd.Series, days: int) -> str:
     t = s.index[-1] - pd.Timedelta(days=days)

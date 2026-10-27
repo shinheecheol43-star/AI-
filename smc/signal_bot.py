@@ -113,7 +113,7 @@ def history(x: pd.DataFrame) -> dict:
 
 
 # ---------------------------------------------------------------- 메시지
-def entry_msg(t, snap: dict, hist: dict, balance: float | None, late: bool) -> str:
+def entry_msg(t, snap: dict, hist: dict, balance: float | None, late: bool, mood: dict | None = None) -> str:
     sym, side, p0 = t.symbol, int(t.side), t.p0
     one_r = p0 * t.stop_pct
     stop = t.stop if late and np.isfinite(t.stop) else p0 - side * one_r      # 늦은 신호는 지금의 손절선
@@ -142,6 +142,8 @@ def entry_msg(t, snap: dict, hist: dict, balance: float | None, late: bool) -> s
     lines += [f"  {'✅' if e else '❌'} {n}" for n, e in zip(EV_NAMES[side], ev)]
     if h:
         lines.append(f"이 전략 과거: {h['n']}건 · 승률 {h['win'] * 100:.0f}% · 평균 {h['avg']:+.2f}R")
+    if mood is not None:
+        lines += sentiment.mood_line(mood, side)
     risk = S.RISK[t.src]
     if balance:
         entry_px = cur if late else p0
@@ -172,6 +174,7 @@ def check(syms, source: str, state: dict, balance: float | None, day: bool = Fal
     opened = x[x.open.astype(bool)]
     msgs = []
     first = not state.get("started")
+    mood = None
     if first:
         lines = [f"🤖 신호 봇 시작 ({', '.join(syms)} · {'스윙 + 데이 롱' if day else '스윙 롱·숏 S5·숏 S2'}, 데이터 {kst(now)} 한국시간까지)"]
         if opened.empty:
@@ -191,7 +194,9 @@ def check(syms, source: str, state: dict, balance: float | None, day: bool = Fal
             continue
         if not first:
             late = now - t.entry > FRESH.get(t.src, FRESH_SWING)
-            msgs.append(entry_msg(t, snap, hist, balance, late))
+            if mood is None:
+                mood = sentiment.mood()                  # 진입 알림이 있을 때만 한 번 받는다
+            msgs.append(entry_msg(t, snap, hist, balance, late, mood))
         alerted[t.key] = float(t.stop)
     closed = x.set_index("key")
     for k in [k for k in alerted if k not in set(opened.key)]:
