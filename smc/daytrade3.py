@@ -41,7 +41,7 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
     D = {s: prepare(s).join(extra(s)) for s in syms}
     idx = D[syms[0]].index
     for s in syms[1:]:
-        idx = idx.intersection(D[s].index)
+        idx = idx.union(D[s].index)          # 상장 시기가 다른 코인도 (없는 구간은 건너뜀)
     idx = idx[idx >= LO]
     S = {k: v.to_numpy() for k, v in session_columns(idx).items()}
     cols = ("open", "high", "low", "close", "atr", "atr1h", "trend4", "score", "fund_evt", "prev_high")
