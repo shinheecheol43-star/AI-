@@ -7,3 +7,5 @@ reports/signals.pkl
 reports/mtf_ob.pkl
 reports/short_study.pkl
 .signal_bot_state.json
+bot.env
+.venv/
