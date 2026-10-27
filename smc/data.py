@@ -66,17 +66,27 @@ def fetch_upbit(market: str = "KRW-BTC", interval: str = "1h", count: int = 1000
 
 # ---------------------------------------------------------------- 바이낸스
 def fetch_binance(symbol: str = "BTCUSDT", interval: str = "1h", count: int = 1000) -> pd.DataFrame:
-    """바이낸스 현물 캔들. 한 번에 1000개까지라 나눠서 받는다. 인증 필요 없음."""
+    """바이낸스 현물 캔들. 한 번에 1000개까지라 나눠서 받는다. 인증 필요 없음.
+
+    api.binance.com 이 지역 차단(451/403)되면 시세 전용 주소 data-api.binance.vision 으로 다시 시도한다.
+    """
     import requests
 
-    url = "https://api.binance.com/api/v3/klines"
+    hosts = ["https://api.binance.com", "https://data-api.binance.vision"]
     rows, end = [], None
     while len(rows) < count:
         params = {"symbol": symbol, "interval": interval, "limit": min(1000, count - len(rows))}
         if end:
             params["endTime"] = end
-        r = requests.get(url, params=params, timeout=10)
-        r.raise_for_status()
+        for k, host in enumerate(hosts):
+            try:
+                r = requests.get(f"{host}/api/v3/klines", params=params, timeout=10)
+                r.raise_for_status()
+                hosts = hosts[k:]                     # 되는 주소를 계속 쓴다
+                break
+            except requests.RequestException:
+                if k == len(hosts) - 1:
+                    raise
         batch = r.json()
         if not batch:
             break
