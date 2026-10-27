@@ -67,6 +67,28 @@ python -m smc.alert --replay --last 200      # 인터넷 없이 과거 데이터
 
 계속 켜 두려면 항상 켜져 있는 PC나 작은 서버(예: 클라우드 무료 VM)에서 `nohup`이나 `tmux`로 실행하세요.
 
+## ②-1 매매 신호 알림 봇 (통합 전략)
+
+`smc.system` 과 같은 규칙·같은 코드로 BTC·ETH 의 스윙 롱, 숏 S5, 숏 S2, 데이 롱 신호를 알려 줍니다. 주문은 넣지 않습니다.
+
+```bash
+python -m smc.signal_bot                          # 바이낸스 API 로 15분마다 확인 (내 PC·서버에서)
+python -m smc.signal_bot --balance 5000           # 잔고(USDT)를 넣으면 권장 수량까지 계산
+python -m smc.signal_bot --source archive --once  # 공개 저장소 데이터로 한 번 시험 (하루 늦은 데이터)
+```
+
+알림 내용
+- **진입**: 전략·방향, 근거 5개(✅/❌)와 근거 일치도(10점), 진입가, 손절가(1R), 익절 참고가 1R·2R·3R 과 과거 도달 비율, 이 전략의 과거 승률·평균 R, 권장 수량
+- **손절 이동**: 추적 손절이 0.3R 이상 유리하게 움직였을 때 새 손절가
+- **청산**: 손절선에 닿아 끝났을 때 결과(R)
+- 처음 켤 때 이미 진행 중인 신호는 "신규 진입 비추천"으로 한 번 정리해서 보냅니다.
+
+근거 일치도는 근거 5개 중 신호 방향과 맞는 개수 × 2 입니다. 백테스트에서 이 점수가 높다고 결과가 좋아지지는 않았습니다.
+신호의 모양을 보여 주는 값으로만 보세요. 익절 참고가에서 정리하는 것도 백테스트상 추적 손절보다 수익이 작았습니다.
+
+텔레그램 설정은 위 ② 와 같습니다 (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`). 잔고는 `BOT_BALANCE_USDT` 환경변수로도 넣을 수 있습니다.
+토큰은 환경변수에만 넣고 코드·채팅·깃에 남기지 마세요.
+
 ## ③ 차트
 
 ```bash
@@ -120,6 +142,8 @@ smc/data.py        시세 불러오기 (CSV, 업비트, 바이낸스), 타임프
 smc/detectors.py   오더블럭·FVG·스윙·거짓 돌파 탐지
 smc/backtest.py    백테스트와 통계, 무작위 진입 대조군
 smc/alert.py       알림 봇 (텔레그램)
+smc/system.py      BTC·ETH 롱·숏 통합 전략 (백테스트 + 지금 상태)
+smc/signal_bot.py  통합 전략 신호 알림 봇
 smc/chart.py       차트 HTML 생성 (+ chart_template.html)
 tests/             규칙 테스트  →  python -m unittest
 data/              BTC/USD 1시간봉 (Coinbase, 출처 CryptoDataDownload)

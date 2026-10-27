@@ -65,7 +65,7 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
         day_peak = max(day_peak, day_pnl)
         last_win[s] = pnl > 0
         trades.append({"sym": s, "side": side, "entry_time": p["time"], "exit_time": idx[t], "pnl": pnl,
-                       "r": pnl / p["risk_usd"], "nth": p["nth"], "stop_pct": p["risk_px"] / p["entry"], "mfe": p["mfe"], "overnight": p["nights"] > 0, "why": why})
+                       "r": pnl / p["risk_usd"], "nth": p["nth"], "entry_px": p["entry"], "stop_pct": p["risk_px"] / p["entry"], "mfe": p["mfe"], "overnight": p["nights"] > 0, "why": why})
         curve.append((idx[t], bal))
         pos[s] = None
 

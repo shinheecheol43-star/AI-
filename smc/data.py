@@ -140,6 +140,19 @@ def extend_with_daily(symbol: str = "BTCUSDT", interval: str = "1h", cache: Path
     return df
 
 
+def extend_with_api(symbol: str = "BTCUSDT", interval: str = "1h", cache: Path = ARCHIVE) -> pd.DataFrame:
+    """바이낸스 API 로 최근 마감 캔들 1000개를 받아 캐시에 붙인다 (실시간 알림용, 인증 필요 없음)."""
+    out = cache / f"{symbol}_{interval}.csv.gz"
+    have = load_csv(out)
+    new = drop_unclosed(fetch_binance(symbol, interval, 1000), interval)
+    if len(new) and new["time"].iloc[0] > have["time"].iloc[-1] + pd.Timedelta(interval.replace("m", "min")):
+        print(f"[주의] {symbol} {interval}: 저장된 캔들과 API 캔들 사이에 빈 구간이 있습니다. 먼저 일별 파일로 채우세요.")
+    df = _normalize(pd.concat([have, new], ignore_index=True))
+    if len(df) != len(have):
+        df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
+    return df
+
+
 def fetch_binance_archive(symbol: str = "BTCUSDT", interval: str = "1h", start: str = "2017-08",
                           end: str | None = None, cache: Path = ARCHIVE) -> pd.DataFrame:
     """data.binance.vision 의 월별 캔들 파일을 받아 합친다. 받은 파일은 cache 에 저장해 재사용.

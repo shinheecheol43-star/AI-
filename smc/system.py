@@ -107,7 +107,8 @@ def trail(X: dict, i: int, side: int) -> dict:
         ex = c[ei]
     fund = (X["fcum"][X["didx"][ei]] - X["fcum"][X["didx"][i]]) * p0          # 양수 = 롱이 냄
     pnl = side * (ex - p0) - TAKER * (p0 + ex) - side * fund
-    return {"r": pnl / one_r, "exit_t": ei, "stop_pct": one_r / p0, "open": still, "stop": stop, "p0": p0}
+    mfe = side * (ext - p0) / one_r                                          # 청산 전까지 가장 유리했던 지점 (R)
+    return {"r": pnl / one_r, "exit_t": ei, "stop_pct": one_r / p0, "open": still, "stop": stop, "p0": p0, "mfe": mfe}
 
 
 def swing_trades(X: dict, max_open: dict | None = None) -> pd.DataFrame:
@@ -130,8 +131,9 @@ def swing_trades(X: dict, max_open: dict | None = None) -> pd.DataFrame:
 def day_trades(syms) -> tuple[pd.DataFrame, dict]:
     res = daytrade3.run(above_ph=True, syms=tuple(syms))        # 코인들이 한 계좌·하루 손실 한도를 공유
     t = res["trades"]
-    return (pd.DataFrame({"symbol": t.sym, "src": "데이 롱", "side": t.side, "entry": t.entry_time, "exit": t.exit_time, "r": t.r,
-                          "stop_pct": t.stop_pct, "open": False}), res["open"])
+    return (pd.DataFrame({"symbol": t.sym, "src": "데이 롱", "side": t.side, "entry": t.entry_time + pd.Timedelta("15min"),
+                          "exit": t.exit_time + pd.Timedelta("15min"), "r": t.r, "stop_pct": t.stop_pct, "open": False,
+                          "p0": t.entry_px, "mfe": t.mfe}), res["open"])
 
 
 # ---------------------------------------------------------------- 백테스트
