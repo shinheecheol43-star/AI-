@@ -15,6 +15,7 @@
 
 사용:  python -m smc.btc_system            # 데이터 갱신 + 백테스트 + 지금 상태
        python -m smc.btc_system --now      # 지금 상태만
+       python -m smc.btc_system --scale 2 --lev 5   # 리스크 2배, 레버리지 상한 5배로 백테스트
 """
 from __future__ import annotations
 
@@ -35,6 +36,7 @@ from .swing_ls import describe
 SYM = "BTC"
 RISK = {"스윙 롱": 0.005, "숏 S5": 0.005, "숏 S2": 0.0025, "데이 롱": 0.005}   # S2 는 BTC 검증 구간 약해 절반
 SLIP = 0.0005
+MAX_LEV = 3.0                                     # 열린 포지션 명목 합계 / 잔고 상한
 BRAKE = {"dd": 0.15, "mult": 0.5, "recover": 0.07}
 STOP_ATR, TRAIL_ATR, HOLD = 2.0, 3.0, 120
 MAX_OPEN = {"스윙 롱": 2, "숏 S5": 1, "숏 S2": 1}   # 동시 보유 한도 (롱은 새 강한 신호면 2개까지)
@@ -149,7 +151,7 @@ def backtest(sw: pd.DataFrame, dy: pd.DataFrame) -> None:
     sets = {"롱만 (스윙 + 데이)": ["스윙 롱", "데이 롱"], "숏만 (S5 + S2)": ["숏 S5", "숏 S2"], "스윙만 (롱 + 숏)": ["스윙 롱", "숏 S5", "숏 S2"],
             "전체": list(RISK), "전체 + 비상 브레이크": list(RISK)}
     for name, srcs in sets.items():
-        cv, _ = account_curve(x[x.src.isin(srcs)], **(BRAKE if "브레이크" in name else {}))
+        cv, _ = account_curve(x[x.src.isin(srcs)], max_lev=MAX_LEV, **(BRAKE if "브레이크" in name else {}))
         d = describe(cv)
         f, a, b = d["full"], d["design"], d["test"]
         print(f"{name:22} | {f[0]*100:+6.1f}% {f[1]*100:6.1f}% {f[0]/-f[1]:5.2f} | {a[0]*100:+6.1f}% {b[0]*100:+6.1f}% {b[1]*100:6.1f}% |"
@@ -207,7 +209,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--now", action="store_true", help="백테스트 없이 지금 상태만")
     ap.add_argument("--no-refresh", action="store_true")
+    ap.add_argument("--scale", type=float, default=1.0, help="모든 리스크에 곱할 배수 (예: 2 = 롱 1%%)")
+    ap.add_argument("--lev", type=float, default=MAX_LEV, help="레버리지 합계 상한")
     a = ap.parse_args()
+    globals()["MAX_LEV"] = a.lev
+    for k in RISK:
+        RISK[k] *= a.scale
     if not a.no_refresh:
         print(f"데이터 갱신: 마지막 캔들 {refresh():%Y-%m-%d %H:%M} UTC ({ARCHIVE})")
     X = context()
