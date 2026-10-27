@@ -144,7 +144,7 @@ def run(risk=0.005, stop_k=2.0, stop_or=False, time_bars=None, be_r=None, trail_
             pos[s] = {"sym": s, "side": side, "entry": c, "qty": q, "stop": c - side * risk_px, "ext": c,
                       "risk_px": risk_px, "risk_usd": q * risk_px, "time": idx[t], "fund": 0.0, "bars": 0,
                       "nights": 0, "mfe": 0.0, "nth": n_today[s]}
-    return {"trades": pd.DataFrame(trades),
+    return {"trades": pd.DataFrame(trades), "open": {s: p for s, p in pos.items() if p},
             "curve": pd.Series([b for _, b in curve], index=pd.DatetimeIndex([t for t, _ in curve]), dtype=float)}
 
 

@@ -109,15 +109,43 @@ def drop_unclosed(df: pd.DataFrame, interval: str) -> pd.DataFrame:
 ARCHIVE = Path(__file__).resolve().parent.parent / "data" / "binance"
 
 
+def _parse_kline_zip(content: bytes) -> pd.DataFrame:
+    import io
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(content)) as z:
+        raw = pd.read_csv(z.open(z.namelist()[0]), header=None)
+    raw = raw[pd.to_numeric(raw[0], errors="coerce").notna()]  # 헤더 줄이 있는 파일 대비
+    ts = raw[0].astype("int64")
+    unit = np.where(ts > 10**14, "us", "ms")                    # 2025년부터 마이크로초 단위
+    t = pd.to_datetime(ts.where(unit == "ms", ts // 1000), unit="ms", utc=True)
+    return pd.DataFrame({"time": t, "open": raw[1], "high": raw[2], "low": raw[3], "close": raw[4], "volume": raw[5]})
+
+
+def extend_with_daily(symbol: str = "BTCUSDT", interval: str = "1h", cache: Path = ARCHIVE) -> pd.DataFrame:
+    """월별 파일 이후(이번 달)를 일별 파일로 채워 캐시에 붙인다. 일별 파일은 보통 다음 날 올라온다."""
+    import requests
+
+    out = cache / f"{symbol}_{interval}.csv.gz"
+    have = load_csv(out)
+    frames = [have]
+    for d in pd.date_range(have["time"].iloc[-1].normalize(), pd.Timestamp.now(tz="UTC").normalize(), freq="D"):
+        url = f"https://data.binance.vision/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{d:%Y-%m-%d}.zip"
+        r = requests.get(url, timeout=60)
+        if r.status_code == 200:
+            frames.append(_parse_kline_zip(r.content))
+    df = _normalize(pd.concat(frames, ignore_index=True))
+    if len(df) != len(have):
+        df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
+    return df
+
+
 def fetch_binance_archive(symbol: str = "BTCUSDT", interval: str = "1h", start: str = "2017-08",
                           end: str | None = None, cache: Path = ARCHIVE) -> pd.DataFrame:
     """data.binance.vision 의 월별 캔들 파일을 받아 합친다. 받은 파일은 cache 에 저장해 재사용.
 
     국가 차단이 있는 거래소 API 대신 쓰는 과거 데이터용. 인증 필요 없음.
     """
-    import io
-    import zipfile
-
     import requests
 
     end = end or (pd.Timestamp.now(tz="UTC") - pd.offsets.MonthBegin(1)).strftime("%Y-%m")
@@ -136,14 +164,7 @@ def fetch_binance_archive(symbol: str = "BTCUSDT", interval: str = "1h", start: 
         if r.status_code == 404:
             continue
         r.raise_for_status()
-        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-            raw = pd.read_csv(z.open(z.namelist()[0]), header=None)
-        raw = raw[pd.to_numeric(raw[0], errors="coerce").notna()]  # 헤더 줄이 있는 파일 대비
-        ts = raw[0].astype("int64")
-        unit = np.where(ts > 10**14, "us", "ms")                    # 2025년부터 마이크로초 단위
-        t = pd.to_datetime(ts.where(unit == "ms", ts // 1000), unit="ms", utc=True)
-        frames.append(pd.DataFrame({"time": t, "open": raw[1], "high": raw[2], "low": raw[3],
-                                    "close": raw[4], "volume": raw[5]}))
+        frames.append(_parse_kline_zip(r.content))
     df = _normalize(pd.concat(frames, ignore_index=True))
     if have is None or len(df) != len(have):   # 새 캔들이 있을 때만 다시 저장
         df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")).to_csv(out, index=False)
