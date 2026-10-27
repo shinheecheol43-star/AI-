@@ -209,17 +209,24 @@ def main():
     a = ap.parse_args()
     syms, path = a.syms.split(","), Path(a.state)
     state = json.loads(path.read_text()) if path.exists() else {}
+    tg = "텔레그램 연결됨" if os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID") else "텔레그램 설정 없음 (화면에만 출력)"
+    print(f"신호 봇 실행 중 · {', '.join(syms)} · {tg} · 이 창을 닫으면 봇이 꺼집니다", flush=True)
     while True:
+        now = lambda: pd.Timestamp.now(tz="Asia/Seoul").strftime("%m-%d %H:%M")
+        print(f"[{now()}] 시세 확인 중...", flush=True)
         try:
-            for m in check(syms, a.source, state, a.balance, a.with_day):
+            msgs = check(syms, a.source, state, a.balance, a.with_day)
+            for m in msgs:
                 send(m)
             path.write_text(json.dumps(state, ensure_ascii=False))
+            print(f"[{now()}] 확인 완료 · 새 알림 {len(msgs)}건 · 지켜보는 신호 {len(state.get('open', {}))}개", flush=True)
         except Exception as e:                       # 네트워크 오류 등으로 봇이 죽지 않게
-            print(f"[오류, 다음 주기에 재시도] {e}", flush=True)
+            print(f"[{now()}] [오류, 다음 주기에 재시도] {e}", flush=True)
         if a.once:
             break
         step = pd.Timedelta("15min" if a.with_day else "1h")
         nxt = pd.Timestamp.now(tz="UTC").floor(step) + step + pd.Timedelta("40s")
+        print(f"  다음 확인 {nxt.tz_convert('Asia/Seoul'):%H:%M}", flush=True)
         time.sleep(max(30.0, (nxt - pd.Timestamp.now(tz="UTC")).total_seconds()))
 
 
