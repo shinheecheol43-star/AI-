@@ -107,11 +107,12 @@ python -m smc.fng_study      # 공포·탐욕 지수로 스윙 타점을 거를 
 ```bash
 bash deploy/check_access.sh                      # 0. 서버에서 Bybit·바이낸스·텔레그램 접속 확인
 python -m smc.trader --once                      # 1. 모의 실행 (주문을 보내지 않음)
-BYBIT_TESTNET=1 python -m smc.trader --live      # 2. 테스트넷 (가짜 돈으로 실제 주문)
+BYBIT_DEMO=1 python -m smc.trader --live         # 2. Bybit 데모 트레이딩 (실제 시세, 가짜 돈으로 실제 주문)
 python -m smc.trader --live                      # 3. 실전 (충분히 시험한 뒤, 작게)
 ```
 
 - API 키는 서버의 `~/.signal-bot.env` 에만 넣습니다 (`BYBIT_API_KEY`, `BYBIT_API_SECRET`). **출금 권한은 끄고, 계약 거래 권한만, 서버 IP 고정**으로 만드세요.
+- 모의 실행도 손절 체결(최근 1시간봉 고가·저가 기준)·수수료·손익을 계산해 누적 성적을 알려 줍니다.
 - 거래당 리스크 0.5% (S2 0.25%), 레버리지 합계 3배 이하, 계좌 −15% 면 리스크 절반 (비상 브레이크)
 - 처음 켤 때 이미 진행 중인 신호와 5시간 넘게 지난 신호는 따라가지 않습니다.
 - 봇 폴더에 `STOP_TRADING` 파일을 만들면 새 진입만 멈춥니다 (손절 관리·청산은 계속).

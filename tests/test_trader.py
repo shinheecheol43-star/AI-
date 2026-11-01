@@ -84,6 +84,37 @@ class TraderFlow(unittest.TestCase):
         self.assertTrue(self.state["brake"])
         # 리스크 0.5% × 0.5 = 25 USDT, 손절폭 4,000 → 0.00625 → 0.006 (브레이크 없으면 0.012)
         self.assertAlmostEqual(lot["qty"], 0.006)
+    def test_paper_stop_fill_books_loss(self):
+        cycle(self.ex, self.state, snap([long_row()], "2026-11-02 05:00"))
+        lot = next(iter(self.state["lots"].values()))
+        self.ex.check_triggers({"BTCUSDT": (77900.0, 80100.0)})        # 저가가 손절가 78,000 아래로
+        msgs = cycle(self.ex, self.state, snap([long_row()], "2026-11-02 06:00"))
+        rec = self.state["closed"][-1]
+        self.assertEqual(rec["exit"], 78000.0)
+        # 0.002 × (78,000 − 80,000) = −4, 수수료 약 0.17 → 약 −4.17 USDT
+        self.assertAlmostEqual(rec["pnl"], -4.17, places=1)
+        self.assertAlmostEqual(self.ex.equity(), 1000 - 4.17, places=1)
+        self.assertTrue(any("누적 1건" in m for m in msgs))
+        self.assertNotIn(lot["stop_id"], [lt["stop_id"] for lt in self.state["lots"].values()])
+
+    def test_paper_state_survives_restart(self):
+        cycle(self.ex, self.state, snap([long_row()], "2026-11-02 05:00"))
+        saved = self.ex.dump()
+        ex2 = DryRun(1000.0)
+        ex2.load(saved)
+        ex2.prices = dict(self.ex.prices)
+        msgs = cycle(ex2, self.state, snap([long_row(stop=79000.0)], "2026-11-02 09:00"))
+        self.assertTrue(any("손절 이동" in m for m in msgs))         # 기록이 사라지지 않고 이어짐
+        self.assertEqual(ex2.position_size("BTCUSDT", 1), 0.002)
+
+    def test_model_exit_books_profit(self):
+        cycle(self.ex, self.state, snap([long_row()], "2026-11-02 05:00"))
+        self.ex.prices["BTCUSDT"] = 84000.0
+        cycle(self.ex, self.state, snap([long_row(open_=False)], "2026-11-03 05:00"))
+        rec = self.state["closed"][-1]
+        self.assertGreater(rec["pnl"], 7.5)                             # 0.002 × 4,000 = 8 − 수수료
+        self.assertAlmostEqual(rec["r"], rec["pnl"] / (0.002 * 2000.0), places=2)
+
 
 if __name__ == "__main__":
     unittest.main()

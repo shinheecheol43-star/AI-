@@ -1,7 +1,7 @@
 """Bybit v5 USDT 무기한 선물 주문 클라이언트 (자동매매용, 필요한 기능만).
 
 키는 환경변수로만 받는다: BYBIT_API_KEY, BYBIT_API_SECRET (출금 권한 없이, 계약 거래 권한만, 서버 IP 고정 권장)
-BYBIT_TESTNET=1 이면 테스트넷(api-testnet.bybit.com)을 쓴다.
+BYBIT_DEMO=1 이면 데모 트레이딩(api-demo.bybit.com: 실제 시세, 가짜 돈), BYBIT_TESTNET=1 이면 테스트넷(api-testnet.bybit.com).
 양방향(헤지) 모드를 쓴다: 롱은 positionIdx 1, 숏은 positionIdx 2 → 같은 코인에 롱·숏을 따로 둘 수 있다.
 손절은 거래소에 '조건부 시장가 청산 주문'(Mark Price 기준)으로 걸어 둔다 → 봇이 꺼져 있어도 손절은 거래소가 실행한다.
 """
@@ -17,7 +17,8 @@ from decimal import Decimal
 
 import requests
 
-MAINNET, TESTNET = "https://api.bybit.com", "https://api-testnet.bybit.com"
+MAINNET, TESTNET, DEMO = "https://api.bybit.com", "https://api-testnet.bybit.com", "https://api-demo.bybit.com"
+TAKER = 0.00055
 IDX = {1: 1, -1: 2}                                   # 방향 → positionIdx (헤지 모드)
 OK_CODES = {0, 110025, 110043}                        # 0 성공, 110025 모드 이미 같음, 110043 레버리지 이미 같음
 
@@ -32,7 +33,9 @@ class Bybit:
         self.key = key or os.environ.get("BYBIT_API_KEY", "")
         self.secret = secret or os.environ.get("BYBIT_API_SECRET", "")
         testnet = os.environ.get("BYBIT_TESTNET", "0") == "1" if testnet is None else testnet
-        self.base = TESTNET if testnet else MAINNET
+        demo = os.environ.get("BYBIT_DEMO", "0") == "1"
+        self.base = DEMO if demo else TESTNET if testnet else MAINNET
+        self.mode = "데모" if demo else "테스트넷" if testnet else "실전"
         self.account_type = account_type or os.environ.get("BYBIT_ACCOUNT_TYPE", "UNIFIED")
         self.recv = str(recv_window)
         self._info: dict[str, dict] = {}
@@ -139,11 +142,25 @@ class Bybit:
 
 
 class DryRun:
-    """주문을 보내지 않고 기록만 하는 가짜 거래소 (모의 실행·시험용). 가격은 밖에서 넣어 준다."""
+    """주문을 보내지 않는 가짜 거래소 (모의 실행·시험용). 가격은 밖에서 넣어 준다.
+    손절 주문은 check_triggers 에 넣어 준 가격 범위(최근 1시간봉 고가·저가)로 실행 여부를 정하고,
+    체결마다 수수료(0.055%)와 손익을 잔고에 반영한다. dump/load 로 상태를 저장해 재시작해도 이어진다."""
+
+    mode = "모의 실행"
 
     def __init__(self, equity: float = 1000.0):
-        self.eq, self.prices, self.orders, self.positions, self.log, self._n = equity, {}, {}, {}, [], 0
+        self.eq, self.prices, self.orders, self.positions, self.avg, self.log, self._n = equity, {}, {}, {}, {}, [], 0
         self.steps = {"BTCUSDT": (0.001, 0.001, 0.1), "ETHUSDT": (0.01, 0.01, 0.01)}
+
+    def dump(self) -> dict:
+        return {"eq": self.eq, "orders": self.orders, "n": self._n,
+                "positions": [[s, d, q] for (s, d), q in self.positions.items()],
+                "avg": [[s, d, p] for (s, d), p in self.avg.items()]}
+
+    def load(self, d: dict):
+        self.eq, self.orders, self._n = d["eq"], d["orders"], d["n"]
+        self.positions = {(s, dd): q for s, dd, q in d["positions"]}
+        self.avg = {(s, dd): p for s, dd, p in d["avg"]}
 
     def _id(self):
         self._n += 1
@@ -169,15 +186,27 @@ class DryRun:
         step = self.instrument(symbol)["qty_step"]
         return math.floor(qty / step + 1e-9) * step
 
+    def _fill(self, symbol, pos_side, qty, px, reduce):
+        key = (symbol, pos_side)
+        held = self.positions.get(key, 0.0)
+        self.eq -= qty * px * TAKER
+        if reduce:
+            qty = min(qty, held)
+            self.eq += pos_side * (px - self.avg.get(key, px)) * qty
+            self.positions[key] = round(held - qty, 10)
+        else:
+            self.avg[key] = (self.avg.get(key, 0.0) * held + px * qty) / (held + qty)
+            self.positions[key] = round(held + qty, 10)
+
     def market(self, symbol, side, qty, reduce_only=False, pos_side=None):
         ps = pos_side if pos_side else side
-        self.positions[(symbol, ps)] = round(self.positions.get((symbol, ps), 0.0) + (-qty if reduce_only else qty), 10)
+        self._fill(symbol, ps, qty, self.prices.get(symbol, 0.0), reduce_only)
         self.log.append(("market", symbol, side, qty, reduce_only))
         return self._id()
 
     def stop(self, symbol, pos_side, qty, trigger):
         oid = self._id()
-        self.orders[oid] = {"symbol": symbol, "side": pos_side, "qty": qty, "trigger": trigger, "status": "Untriggered"}
+        self.orders[oid] = {"symbol": symbol, "side": pos_side, "qty": qty, "trigger": trigger, "status": "Untriggered", "fill": 0.0}
         self.log.append(("stop", symbol, pos_side, qty, trigger))
         return oid
 
@@ -192,10 +221,18 @@ class DryRun:
 
     def order_status(self, symbol, order_id):
         o = self.orders.get(order_id)
-        return (o["status"], o["trigger"]) if o else ("Unknown", 0.0)
+        return (o["status"], o["fill"]) if o else ("Unknown", 0.0)
+
+    def check_triggers(self, ranges: dict):
+        """ranges: {심볼: (저가, 고가)} 지난 확인 이후 가격 범위. 손절가에 닿은 주문을 손절가에 체결."""
+        for oid, o in self.orders.items():
+            if o["status"] != "Untriggered" or o["symbol"] not in ranges:
+                continue
+            lo, hi = ranges[o["symbol"]]
+            if (lo <= o["trigger"]) if o["side"] > 0 else (hi >= o["trigger"]):
+                self.fill_stop(oid)
 
     def fill_stop(self, order_id):
-        """시험용: 거래소에서 손절이 실행된 것처럼 만든다."""
         o = self.orders[order_id]
-        o["status"] = "Filled"
-        self.positions[(o["symbol"], o["side"])] = round(self.positions.get((o["symbol"], o["side"]), 0.0) - o["qty"], 10)
+        o["status"], o["fill"] = "Filled", o["trigger"]
+        self._fill(o["symbol"], o["side"], o["qty"], o["trigger"], True)
