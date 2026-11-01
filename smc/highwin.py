@@ -131,7 +131,7 @@ def trades(d, idx, side, tgt, b, hold) -> pd.DataFrame:
     px = np.where(fs <= ft, np.where(fs < big, spx, last), tpx)
     px = np.where((fs >= big) & (ft >= big), last, px)
     xc = np.where((ft < fs), tcost, TAKER)
-    ret = (px - entry) / entry - TAKER - xc            # 가격 기준 순수익 (1배)
+    ret = (px - entry) / np.abs(entry) - TAKER - xc            # 가격 기준 순수익 (1배)
     ex = e + np.minimum(np.minimum(fs, ft), hold - 1)
     keep, busy = [], -1
     for t in range(len(e)):
@@ -140,7 +140,7 @@ def trades(d, idx, side, tgt, b, hold) -> pd.DataFrame:
         keep.append(t)
         busy = ex[t]
     k = np.array(keep, int)
-    return pd.DataFrame({"time": d.index[e[k]], "exit": d.index[ex[k]], "ret": ret[k], "stop_dist": (b * atr[idx] / entry)[k]})
+    return pd.DataFrame({"time": d.index[e[k]], "exit": d.index[ex[k]], "ret": ret[k], "stop_dist": (b * atr[idx] / np.abs(entry))[k]})
 
 
 def lev_curve(x: pd.DataFrame, lev: float):

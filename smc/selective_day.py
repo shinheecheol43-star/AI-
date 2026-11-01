@@ -93,7 +93,7 @@ def labels(sym: str, tf: str, side: int, tgt_k: float, stop_k: float) -> pd.Data
     last = c[e + hold - 1]
     px = np.where(fs <= ft, np.where(fs < big, spx, last), tgt)
     px = np.where((fs >= big) & (ft >= big), last, px)
-    ret = (px - entry) / entry - TAKER - np.where(ft < fs, MAKER, TAKER)
+    ret = (px - entry) / np.abs(entry) - TAKER - np.where(ft < fs, MAKER, TAKER)
     ex = e + np.minimum(np.minimum(fs, ft), hold - 1)
     return pd.DataFrame({"ret": ret, "exit_i": ex, "i": i}, index=d.index[i])
 
