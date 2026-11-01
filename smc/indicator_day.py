@@ -100,7 +100,7 @@ def frame(sym: str) -> pd.DataFrame:
 def parts(d: pd.DataFrame, side: int) -> dict[str, pd.Series]:
     """부품 신호 (side=1 롱, -1 숏). 숏은 가격 축을 뒤집어 같은 규칙을 쓴다."""
     s = side
-    c, hi, lo = d.close * s, (d.high if s > 0 else d.low) * s, (d.low if s > 0 else d.high) * s
+    c, lo = d.close * s, (d.low if s > 0 else d.high) * s
     band_lo = (d.lo if s > 0 else d.up) * s
     band_up = (d.up if s > 0 else d.lo) * s
     k = d.k if s > 0 else 1 - d.k
