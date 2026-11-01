@@ -165,7 +165,7 @@ def main():
                     btc, eth = x2[x2.symbol == "BTC"].ret.mean(), x2[x2.symbol == "ETH"].ret.mean()
                     ok = (x2.ret > 0).mean() >= .85 and x2.ret.mean() > 0 and btc > 0 and eth > 0 and len(x2) >= 50
                     eq = np.cumprod(1 + x2.ret.to_numpy())
-                    yr = x2.groupby(x2.Index.year).ret.agg(["count", lambda r: (r > 0).mean(), "mean"])
+                    yr = x2.groupby(x2.Index.dt.year).ret.agg(["count", lambda r: (r > 0).mean(), "mean"])
                     print(f"   확률 ≥ {th:.2f}: 2022~ {len(x2)}건 (월 {len(x2)/yrs/12:.1f}건) 승률 {(x2.ret > 0).mean()*100:.0f}%"
                           f" 평균 {x2.ret.mean()*100:+.3f}% · BTC {btc*100:+.3f}% ETH {eth*100:+.3f}% · 1배 누적 {eq[-1]:.2f}배"
                           f" | {'✅' if ok else '–'}")
