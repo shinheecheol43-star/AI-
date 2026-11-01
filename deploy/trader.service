@@ -1,0 +1,16 @@
+[Unit]
+Description=BTC·ETH 스윙 자동매매 봇
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__REPO__
+EnvironmentFile=__ENV__
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__REPO__/.venv/bin/python -m smc.trader __ARGS__
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

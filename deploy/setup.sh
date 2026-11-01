@@ -28,12 +28,21 @@ if [ ! -f "$ENV_FILE" ]; then
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 BOT_BALANCE_USDT=
+BYBIT_API_KEY=
+BYBIT_API_SECRET=
+BYBIT_TESTNET=1
+RISK_SCALE=1
 CONF
 fi
 chmod 600 "$ENV_FILE"
 
 sed -e "s#__REPO__#$REPO#g" -e "s#__USER__#$USER#g" -e "s#__ENV__#$ENV_FILE#g" deploy/signal-bot.service \
   | sudo tee /etc/systemd/system/signal-bot.service >/dev/null
+for mode in dry live; do
+  args=$([ "$mode" = live ] && echo "--live" || echo "")
+  sed -e "s#__REPO__#$REPO#g" -e "s#__USER__#$USER#g" -e "s#__ENV__#$ENV_FILE#g" -e "s#__ARGS__#$args#g" deploy/trader.service \
+    | sudo tee /etc/systemd/system/trader-$mode.service >/dev/null
+done
 sudo systemctl daemon-reload
 
 echo
@@ -42,3 +51,6 @@ echo "  1) nano $ENV_FILE        # 텔레그램 토큰·채팅 ID·잔고 입력
 echo "  2) .venv/bin/python -m smc.signal_bot --once     # 한 번 시험 (텔레그램으로 시작 메시지가 오는지)"
 echo "  3) sudo systemctl enable --now signal-bot        # 계속 켜 두기 (서버 재시작 때도 자동 실행)"
 echo "  상태 확인: systemctl status signal-bot   /   로그: journalctl -u signal-bot -f"
+echo
+echo "자동매매 (순서대로): bash deploy/check_access.sh → sudo systemctl start trader-dry (모의)"
+echo "  → BYBIT_TESTNET=1 로 sudo systemctl start trader-live (테스트넷) → 충분히 본 뒤 BYBIT_TESTNET=0 (실전)"

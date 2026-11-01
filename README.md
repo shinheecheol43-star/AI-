@@ -99,6 +99,24 @@ python -m smc.signal_bot --source archive --once  # 공개 저장소 데이터�
 python -m smc.fng_study      # 공포·탐욕 지수로 스윙 타점을 거를 수 있는지 연구 → reports/fng_study.txt
 ```
 
+## ②-2 자동매매 봇 (Bybit, 스윙 전략)
+
+`smc.system` 의 스윙 신호(스윙 롱, 숏 S5, 숏 S2)를 Bybit USDT 무기한 선물 주문으로 옮깁니다.
+손절은 거래소에 조건부 주문(Mark Price 기준)으로 걸려 있어 봇이 꺼져도 실행됩니다.
+
+```bash
+bash deploy/check_access.sh                      # 0. 서버에서 Bybit·바이낸스·텔레그램 접속 확인
+python -m smc.trader --once                      # 1. 모의 실행 (주문을 보내지 않음)
+BYBIT_TESTNET=1 python -m smc.trader --live      # 2. 테스트넷 (가짜 돈으로 실제 주문)
+python -m smc.trader --live                      # 3. 실전 (충분히 시험한 뒤, 작게)
+```
+
+- API 키는 서버의 `~/.signal-bot.env` 에만 넣습니다 (`BYBIT_API_KEY`, `BYBIT_API_SECRET`). **출금 권한은 끄고, 계약 거래 권한만, 서버 IP 고정**으로 만드세요.
+- 거래당 리스크 0.5% (S2 0.25%), 레버리지 합계 3배 이하, 계좌 −15% 면 리스크 절반 (비상 브레이크)
+- 처음 켤 때 이미 진행 중인 신호와 5시간 넘게 지난 신호는 따라가지 않습니다.
+- 봇 폴더에 `STOP_TRADING` 파일을 만들면 새 진입만 멈춥니다 (손절 관리·청산은 계속).
+- 양방향(헤지) 모드로 바꾸므로, 같은 계정에서 수동 매매를 함께 하면 기록이 꼬일 수 있습니다. 봇 전용 하위 계정을 권장합니다.
+
 ## ③ 차트
 
 ```bash
@@ -154,6 +172,7 @@ smc/backtest.py    백테스트와 통계, 무작위 진입 대조군
 smc/alert.py       알림 봇 (텔레그램)
 smc/system.py      BTC·ETH 롱·숏 통합 전략 (백테스트 + 지금 상태)
 smc/signal_bot.py  통합 전략 신호 알림 봇
+smc/trader.py      스윙 자동매매 봇 (+ smc/bybit.py 주문 클라이언트)
 smc/chart.py       차트 HTML 생성 (+ chart_template.html)
 tests/             규칙 테스트  →  python -m unittest
 data/              BTC/USD 1시간봉 (Coinbase, 출처 CryptoDataDownload)

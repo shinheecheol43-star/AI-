@@ -10,3 +10,6 @@ reports/short_study.pkl
 bot.env
 .venv/
 data/binance/*_flow.csv.gz
+.trader_state*.json
+STOP_TRADING
+dist/
