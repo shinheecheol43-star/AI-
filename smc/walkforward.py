@@ -60,7 +60,7 @@ def walk(big: pd.DataFrame, M, L: int, W: float, K: int, step: int) -> pd.DataFr
     while t < END:
         nxt = t + pd.DateOffset(months=step)
         last = t.tz_localize(None).to_period("M") - 1           # 직전 달까지 청산된 거래만
-        first = last - L
+        first = max(last - L, M["n"].index[0])
         n, w, s = (M[k].loc[last] - M[k].loc[first] for k in ("n", "w", "s"))
         ok = (n >= 20) & (w / n.where(n > 0) >= W) & (s > 0)
         chosen = s[ok].sort_values(ascending=False).head(K).index
