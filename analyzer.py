@@ -330,3 +330,88 @@ def verdict_text(fit, trust):
     if fit >= 45:
         return "🤔 보통이에요. 주의 성분과 리뷰의 아쉬운 점을 확인해 보세요."
     return "✋ 나에게는 맞지 않을 가능성이 높아요. 다른 제품을 추천해요."
+
+
+# ---------------------------------------------------------------------------
+# 5. 총평: 리뷰, 피부 타입, 광고 비교 결과를 이어지는 문장으로 정리
+# ---------------------------------------------------------------------------
+GOOD_PHRASE = {"보습": "보습력", "진정/순함": "순하고 진정되는 느낌", "산뜻함": "산뜻한 사용감", "흡수": "빠른 흡수",
+               "트러블": "트러블이 적은 점", "미백/톤업": "톤업 효과", "백탁": "백탁이 없는 점", "지속력": "지속력",
+               "향": "향", "가격": "가성비"}
+BAD_PHRASE = {"보습": "건조함", "진정/순함": "자극", "산뜻함": "끈적임", "흡수": "잘 흡수되지 않는 점",
+              "트러블": "트러블", "미백/톤업": "효과를 못 느낀 점", "백탁": "백탁", "지속력": "짧은 지속력",
+              "향": "향", "가격": "가격"}
+
+
+def _josa(word, pair):
+    """받침에 따라 조사 고르기. pair 예: ('이', '가'), ('은', '는'), ('과', '와')"""
+    last = word[-1]
+    if "가" <= last <= "힣":
+        return word + (pair[0] if (ord(last) - 0xAC00) % 28 else pair[1])
+    return word + pair[0]
+
+
+def _join(words):
+    if len(words) == 1:
+        return words[0]
+    return ", ".join(words[:-1]) + ", " + words[-1] if len(words) > 2 else _josa(words[0], ("과", "와")) + " " + words[1]
+
+
+def overall_comment(reviews, claims, skin_type, fit):
+    n = reviews["count"]
+    if n == 0:
+        return "리뷰가 없어서 총평을 만들 수 없어요."
+    aspects = reviews["aspects"]
+    good = sorted((a for a in aspects if aspects[a]["좋음"]), key=lambda a: -aspects[a]["좋음"])[:2]
+    bad = sorted((a for a in aspects if aspects[a]["아쉬움"]), key=lambda a: -aspects[a]["아쉬움"])[:2]
+    pos, neg, mixed = reviews["positive"], reviews["negative"], reviews["mixed"]
+    out = []
+
+    # 1) 전체 분위기
+    if pos >= (neg + mixed) * 2:
+        out.append("전체적으로 **만족한다는 평이 많은 제품**이에요.")
+    elif neg > pos + mixed:
+        out.append("전체적으로 **아쉽다는 평이 더 많은 제품**이에요.")
+    else:
+        out.append("**호불호가 갈리는 제품**이에요.")
+
+    # 2) 장점과 단점
+    if good and bad:
+        out.append(f"사용자들은 {_josa(_join([GOOD_PHRASE[a] for a in good]), ('을', '를'))} 좋게 평가했지만, "
+                   f"{_join([BAD_PHRASE[a] for a in bad])} 때문에 아쉬워하는 의견도 있었어요.")
+    elif good:
+        out.append(f"특히 {_josa(_join([GOOD_PHRASE[a] for a in good]), ('을', '를'))} 좋게 평가했고, 눈에 띄는 불만은 적었어요.")
+    elif bad:
+        out.append(f"특히 {_join([BAD_PHRASE[a] for a in bad])}에 대한 불만이 많았어요.")
+
+    # 3) 피부 타입별 차이
+    liked = [s for s, r in reviews["by_skin"].items() if r["긍정"] > r["부정"] + r["혼합"]]
+    disliked = [s for s, r in reviews["by_skin"].items() if r["부정"] + r["혼합"] > r["긍정"]]
+    if liked and disliked:
+        out.append(f"피부 타입별로 보면 {_josa(', '.join(liked), ('은', '는'))} 만족한 반면, "
+                   f"{_josa(', '.join(disliked), ('은', '는'))} 아쉽다는 반응이 많아 **피부 타입에 따라 차이가 커요.**")
+    elif liked:
+        out.append(f"특히 {', '.join(liked)} 피부 사용자들의 만족도가 높았어요.")
+    elif disliked:
+        out.append(f"특히 {', '.join(disliked)} 피부 사용자들의 불만이 많았어요.")
+
+    # 4) 광고와 실제
+    differ = [c["항목"] for c in claims if c["판정"] == "❌ 광고와 다름"]
+    match = [c["항목"] for c in claims if c["판정"] == "✅ 광고와 일치"]
+    if differ:
+        out.append(f"광고에서 강조한 {_josa(_join([GOOD_PHRASE[a] for a in differ]), ('은', '는'))} **실제 리뷰와 달랐어요.**")
+    elif match:
+        out.append(f"광고에서 말한 {_josa(_join([GOOD_PHRASE[a] for a in match]), ('은', '는'))} 실제 리뷰에서도 확인됐어요.")
+    if reviews["sponsored"]:
+        out.append(f"(협찬·체험단 리뷰 {reviews['sponsored']}개는 빼고 판단했어요.)")
+
+    # 5) 나에게는?
+    if skin_type in liked:
+        out.append(f"👉 **{skin_type}**인 나와 같은 피부의 반응이 좋아서, **나에게도 잘 맞을 가능성이 높아요.**")
+    elif skin_type in disliked:
+        out.append(f"👉 **{skin_type}**인 나와 같은 피부의 반응이 좋지 않아서, **구매 전에 샘플로 먼저 써보는 게 좋아요.**")
+    elif fit >= 70:
+        out.append(f"👉 나와 같은 피부의 리뷰는 부족하지만, 성분으로 보면 **{skin_type}**인 나에게 잘 맞는 편이에요.")
+    else:
+        out.append(f"👉 나와 같은 피부의 리뷰가 부족하고 성분 적합도도 높지 않아서, **신중하게 고르는 게 좋아요.**")
+    return " ".join(out)

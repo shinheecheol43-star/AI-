@@ -108,7 +108,9 @@ st.info(f"**결론:** {az.verdict_text(fit, trust)}")
 if reviews["count"] or reviews["sponsored"]:
     st.subheader("📝 리뷰 한눈에 요약")
     summary = az.summarize_reviews(reviews, skin_type)
-    with st.container(border=True):
+    st.markdown("**🗣️ 총평**")
+    st.success(az.overall_comment(reviews, claims, skin_type, fit))
+    with st.expander("숫자로 자세히 보기", expanded=False):
         st.markdown(summary["text"])
     g, b = st.columns(2)
     with g:
