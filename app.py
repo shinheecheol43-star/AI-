@@ -1,59 +1,16 @@
-"""광고 말고 진짜 - AI 화장품 판별 봇 (Streamlit).
+"""광고 말고 진짜 - 화장품 광고 판별 봇 (Streamlit, 무료).
 
 실행: streamlit run app.py
 """
-
-import base64
-import os
 
 import pandas as pd
 import streamlit as st
 
 import analyzer as az
+import fetcher
 from sample_data import SAMPLES
 
-MODEL = "claude-opus-5-5"
-
 st.set_page_config(page_title="광고 말고 진짜", page_icon="🔍", layout="wide")
-
-
-# ---------------------------------------------------------------------------
-# Claude API (선택 기능: 키가 있을 때만 사용)
-# ---------------------------------------------------------------------------
-def get_client(api_key):
-    if not api_key:
-        return None
-    import anthropic
-    return anthropic.Anthropic(api_key=api_key)
-
-
-def ask_claude(client, content, max_tokens=2000):
-    response = client.beta.messages.create(
-        model=MODEL,
-        max_tokens=max_tokens,
-        output_config={"effort": "low"},
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        messages=[{"role": "user", "content": content}],
-    )
-    if response.stop_reason == "refusal":
-        return "AI가 이 요청에 답하지 않았어요. 입력 내용을 확인해 주세요."
-    return "".join(b.text for b in response.content if b.type == "text")
-
-
-def read_ad_image(client, file):
-    """광고 캡처 이미지에서 광고 문구와 성분표를 글자로 뽑아낸다."""
-    data = base64.standard_b64encode(file.getvalue()).decode()
-    text = ask_claude(client, [
-        {"type": "image", "source": {"type": "base64", "media_type": file.type, "data": data}},
-        {"type": "text", "text": (
-            "이 화장품 광고 이미지에 있는 글자를 그대로 옮겨 적어 주세요. "
-            "다음 형식으로만 답하세요.\n[광고]\n(광고 문구, 해시태그 포함)\n[성분]\n(성분표가 보이면 성분, 없으면 비워두기)"
-        )},
-    ])
-    ad, _, ing = text.partition("[성분]")
-    return ad.replace("[광고]", "").strip(), ing.strip()
-
 
 # ---------------------------------------------------------------------------
 # 사이드바: 내 기본 정보
@@ -63,49 +20,58 @@ with st.sidebar:
     skin_type = st.selectbox("피부 타입", az.SKIN_TYPES)
     concerns = st.multiselect("피부 고민", az.CONCERNS, default=["건조/보습"])
     avoid = st.multiselect("피하고 싶은 성분", az.AVOID_OPTIONS)
-    st.divider()
-    st.subheader("🤖 AI 기능 (선택)")
-    api_key = st.text_input("Anthropic API 키", type="password",
-                            value=os.environ.get("ANTHROPIC_API_KEY", ""),
-                            help="없어도 기본 분석은 됩니다. 키가 있으면 광고 캡처 읽기와 AI 종합 코멘트를 쓸 수 있어요.")
 
 profile = {"skin_type": skin_type, "concerns": concerns, "avoid": avoid}
-client = get_client(api_key)
 
 # ---------------------------------------------------------------------------
 # 입력
 # ---------------------------------------------------------------------------
 st.title("🔍 광고 말고 진짜")
-st.caption("인스타 광고, 인플루언서 추천 제품을 넣으면 **내 피부 기준으로** 성분, 광고 문구, 실사용 리뷰를 한눈에 분석해 드려요.")
+st.caption("광고에서 본 제품의 **링크만 넣으면** 내 피부 기준으로 성분, 광고 문구, 실사용 리뷰를 한눈에 분석해 드려요.")
 
-for key in ("ad", "ingredients", "reviews"):
+for key in ("ad", "ingredients", "reviews", "title"):
     st.session_state.setdefault(key, "")
+st.session_state.setdefault("notes", [])
+st.session_state.setdefault("auto_run", False)
+
+
+def load_link():
+    url = st.session_state["url"].strip()
+    if not url:
+        st.session_state["notes"] = ["링크를 입력해 주세요."]
+        st.session_state["auto_run"] = False
+        return
+    try:
+        result = fetcher.read_link(url)
+    except fetcher.FetchError as e:
+        st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False)
+        return
+    st.session_state.update(title=result["title"], ad=result["ad"], ingredients=result["ingredients"],
+                            reviews=result["reviews"], notes=result["notes"], auto_run=True)
 
 
 def load_sample(name):
-    st.session_state.update(SAMPLES[name])
+    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False)
 
 
-cols = st.columns(len(SAMPLES))
-for col, name in zip(cols, SAMPLES):
-    col.button(name, on_click=load_sample, args=(name,), width="stretch")
+u1, u2 = st.columns([5, 1], vertical_alignment="bottom")
+u1.text_input("🔗 제품 페이지 링크", key="url", placeholder="https://...")
+u2.button("링크로 분석", on_click=load_link, type="primary", width="stretch")
 
-if client:
-    image = st.file_uploader("📸 광고 캡처 올리기 (AI가 글자를 읽어 아래 칸에 채워요)", type=["png", "jpg", "jpeg", "webp"])
-    if image and st.button("캡처에서 글자 읽기"):
-        with st.spinner("AI가 이미지를 읽는 중..."):
-            ad_text, ing_text = read_ad_image(client, image)
-        st.session_state["ad"] = ad_text
-        if ing_text:
-            st.session_state["ingredients"] = ing_text
-        st.rerun()
+for note in st.session_state["notes"]:
+    st.warning(note)
 
-c1, c2, c3 = st.columns(3)
-c1.text_area("📢 광고 문구 (인스타 캡션 등)", key="ad", height=200)
-c2.text_area("🧪 전성분", key="ingredients", height=200, placeholder="정제수, 글리세린, ...")
-c3.text_area("💬 실사용 리뷰 (한 줄에 하나씩)", key="reviews", height=200)
+with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직접 붙여넣기", expanded=not st.session_state["auto_run"]):
+    cols = st.columns(len(SAMPLES))
+    for col, name in zip(cols, SAMPLES):
+        col.button(name, on_click=load_sample, args=(name,), width="stretch")
+    c1, c2, c3 = st.columns(3)
+    c1.text_area("📢 광고 문구 (인스타 캡션, 상세페이지 문구 등)", key="ad", height=200)
+    c2.text_area("🧪 전성분", key="ingredients", height=200, placeholder="정제수, 글리세린, ...")
+    c3.text_area("💬 실사용 리뷰 (한 줄에 하나씩)", key="reviews", height=200)
+    clicked = st.button("🔍 분석하기", width="stretch")
 
-if not st.button("🔍 분석하기", type="primary", width="stretch"):
+if not (clicked or st.session_state["auto_run"]):
     st.stop()
 
 ad_text, ing_text, rev_text = st.session_state["ad"], st.session_state["ingredients"], st.session_state["reviews"]
@@ -123,7 +89,7 @@ claims = az.compare_claims(ad_text, reviews)
 fit, trust = az.scores(ingredients, ad, reviews, claims)
 
 st.divider()
-st.header("📊 분석 결과")
+st.header(f"📊 분석 결과{' - ' + st.session_state['title'] if st.session_state['title'] else ''}")
 
 m1, m2, m3 = st.columns(3)
 m1.metric("나와의 적합도", f"{fit}점")
@@ -174,22 +140,5 @@ with right:
         notes.append(f"협찬·체험단 리뷰 {reviews['sponsored']}개는 걸러서 보세요.")
     for n in notes:
         st.write("• " + n)
-
-# ---------------------------------------------------------------------------
-# AI 종합 코멘트 (선택)
-# ---------------------------------------------------------------------------
-if client:
-    st.divider()
-    st.subheader("🤖 AI 종합 코멘트")
-    with st.spinner("AI가 정리하는 중..."):
-        comment = ask_claude(client, (
-            "당신은 화장품을 고민하는 소비자를 돕는 친절한 상담가입니다. 광고를 그대로 믿지 말고, "
-            "아래 분석 결과를 근거로 이 소비자에게 맞는지 한국어로 5줄 이내로 정리해 주세요. "
-            "마지막 줄에는 구매 전 확인할 점 하나를 적어 주세요.\n\n"
-            f"[내 정보] 피부: {skin_type}, 고민: {', '.join(concerns) or '없음'}, 피하는 성분: {', '.join(avoid) or '없음'}\n"
-            f"[광고 문구]\n{ad_text}\n[전성분]\n{ing_text}\n[리뷰]\n{rev_text}\n"
-            f"[규칙 기반 분석] 적합도 {fit}점, 광고 신뢰도 {trust}점, 성분 {ingredients}, 광고 비교 {claims}"
-        ))
-    st.write(comment)
 
 st.caption("※ 이 분석은 참고용이에요. 피부 반응은 개인차가 있으니 패치 테스트를 권장해요.")
