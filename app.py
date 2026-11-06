@@ -98,8 +98,34 @@ m2.metric("광고 신뢰도", f"{trust}점")
 m2.progress(trust / 100)
 if reviews["count"]:
     m3.metric("리뷰 만족도", f"{round(reviews['positive'] / reviews['count'] * 100)}%",
-              help=f"리뷰 {reviews['count']}개 중 긍정 {reviews['positive']}개, 부정 {reviews['negative']}개")
+              help=f"협찬 제외 리뷰 {reviews['count']}개 중 긍정 {reviews['positive']}개, "
+                   f"부정 {reviews['negative']}개, 혼합 {reviews['mixed']}개")
 st.info(f"**결론:** {az.verdict_text(fit, trust)}")
+
+# ---------------------------------------------------------------------------
+# 리뷰 한눈에 요약
+# ---------------------------------------------------------------------------
+if reviews["count"] or reviews["sponsored"]:
+    st.subheader("📝 리뷰 한눈에 요약")
+    summary = az.summarize_reviews(reviews, skin_type)
+    with st.container(border=True):
+        st.markdown(summary["text"])
+    g, b = st.columns(2)
+    with g:
+        st.markdown("**👍 좋은 점 TOP 3**")
+        for aspect, cnt, quote in summary["good"]:
+            st.success(f"**{aspect}** ({cnt}명)\n\n“{quote}”")
+        if not summary["good"]:
+            st.caption("눈에 띄는 칭찬 항목이 없어요.")
+    with b:
+        st.markdown("**👎 아쉬운 점 TOP 3**")
+        for aspect, cnt, quote in summary["bad"]:
+            st.error(f"**{aspect}** ({cnt}명)\n\n“{quote}”")
+        if not summary["bad"]:
+            st.caption("눈에 띄는 불만 항목이 없어요.")
+    if reviews["by_skin"]:
+        with st.expander("피부 타입별 반응 보기"):
+            st.dataframe(pd.DataFrame(reviews["by_skin"]).T, width="stretch")
 
 left, right = st.columns(2)
 
@@ -132,13 +158,5 @@ with right:
     aspect_df = aspect_df[aspect_df.sum(axis=1) > 0]
     if not aspect_df.empty:
         st.bar_chart(aspect_df, color=["#2E9E6B", "#E0663B"], horizontal=True)
-    notes = []
-    if reviews["same_skin"]:
-        notes.append(f"나와 같은 **{skin_type}** 피부 리뷰 {reviews['same_skin']}개 중 "
-                     f"{reviews['same_skin_positive']}개가 긍정적이에요.")
-    if reviews["sponsored"]:
-        notes.append(f"협찬·체험단 리뷰 {reviews['sponsored']}개는 걸러서 보세요.")
-    for n in notes:
-        st.write("• " + n)
 
 st.caption("※ 이 분석은 참고용이에요. 피부 반응은 개인차가 있으니 패치 테스트를 권장해요.")
