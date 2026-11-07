@@ -136,6 +136,14 @@ def _find_ad_lines(lines, limit=15):
     return picked
 
 
+def clean_title(title):
+    """'[55%] [더블기획] 제품명 _1개당 22,375원' 같은 할인 문구를 정리한다."""
+    t = re.sub(r"\[[^\]]*\]|【[^】]*】", " ", title)
+    t = re.sub(r"\s*[_|]\s*\d.*원.*$", "", t)
+    t = re.sub(r"\s*\|.*$", "", t)  # '제품명 | 쇼핑몰 이름'
+    return re.sub(r"\s+", " ", t).strip() or title.strip()
+
+
 def parse(html):
     soup = BeautifulSoup(html, "html.parser")
     ld = _json_ld(soup)
@@ -163,7 +171,7 @@ def parse(html):
     if not ad_text:
         notes.append("광고 문구를 찾지 못했어요.")
 
-    return {"title": title, "ad": ad_text, "ingredients": ingredients,
+    return {"title": clean_title(title), "ad": ad_text, "ingredients": ingredients,
             "reviews": "\n".join(reviews), "notes": notes}
 
 

@@ -45,8 +45,10 @@ python -m http.server 8000 --directory demo
 무료로 인터넷에 공개하려면 이 저장소를 [Streamlit Community Cloud](https://streamlit.io/cloud)에 연결하고 `app.py`를 선택하면 됩니다.
 
 ## 파일 구성
-- `app.py` – 화면 (Streamlit)
+- `app.py` – 화면 구성 (Streamlit)
 - `analyzer.py` – 성분 사전, 광고·리뷰 분석 규칙, 점수 계산
+- `ui.py` – 화면 디자인 (색상, 카드, 점수 그래프 등)
+- `.streamlit/config.toml` – 테마 색상
 - `fetcher.py` – 링크의 페이지에서 광고 문구, 전성분, 리뷰를 찾는 기능
 - `sample_data.py` – 시연용 가상 제품 데이터
 - `demo/sample_product.html` – 링크 분석을 시험해 볼 수 있는 가상 제품 페이지
