@@ -7,6 +7,8 @@
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -29,11 +31,11 @@ class FetchError(Exception):
     pass
 
 
-def fetch_html(url):
+def fetch_html(url, timeout=10):
     if not re.match(r"^https?://", url):
         url = "https://" + url
     try:
-        res = requests.get(url, headers=HEADERS, timeout=10)
+        res = requests.get(url, headers=HEADERS, timeout=timeout)
     except requests.RequestException as e:
         raise FetchError(f"사이트에 접속하지 못했어요. ({type(e).__name__})") from e
     if res.status_code != 200:
@@ -94,11 +96,25 @@ def _lines(soup):
     return out
 
 
+def _find_ingredients_in_table(soup):
+    """상품정보제공고시 표의 '화장품법에 따라 기재해야 하는 모든 성분' 같은 칸을 찾는다."""
+    for label in soup.find_all(["th", "td", "dt", "strong", "span"]):
+        text = label.get_text(" ", strip=True)
+        if "성분" not in text or len(text) > 40:
+            continue
+        value = label.find_next_sibling(["td", "dd"]) or label.find_next(["td", "dd"])
+        if value:
+            v = re.sub(r"\s+", " ", value.get_text(" ", strip=True))
+            if v.count(",") >= 4:
+                return v
+    return ""
+
+
 def _find_ingredients(lines):
     """'전성분' 다음에 오는 글, 또는 정제수·글리세린이 들어간 쉼표 많은 줄을 성분표로 본다."""
     for i, line in enumerate(lines):
-        if "전성분" in line or "ingredients" in line.lower():
-            after = re.split(r"전성분|ingredients", line, flags=re.I)[-1].strip(" :：")
+        if "전성분" in line or "모든 성분" in line or "ingredients" in line.lower():
+            after = re.split(r"전성분|모든 성분|ingredients", line, flags=re.I)[-1].strip(" :：")
             candidates = [after] + lines[i + 1:i + 4]
             for c in candidates:
                 if c.count(",") >= 4:
@@ -111,6 +127,17 @@ def _find_ingredients(lines):
     return best
 
 
+REVIEW_JUNK = re.compile(r"^(포토|동영상|전체|베스트|최신|추천)?\s*(리뷰|후기|상품평|구매평)\s*(\(?[\d,]+|쓰기|작성|더보기|전체|보기|순)|"
+                         r"^[\d,.\s★☆점%()/]+$|로그인|장바구니|구매하기|배송|도움이 돼요|신고|평점")
+
+
+def _looks_like_review(text):
+    """버튼·제목 글자('리뷰 1,234건', '리뷰 쓰기')가 아니라 실제 후기 문장인지 판단."""
+    if len(text) < 10 or REVIEW_JUNK.search(text):
+        return False
+    return bool(re.search(r"[가-힣]{2,}", text)) and bool(re.search(r"(요|다|음|함|듯|네|ㅎ|ㅋ|[!~.])\s*$|요\s", text))
+
+
 def _find_reviews(soup):
     """class나 id에 'review'가 들어간 영역에서 리뷰 문장을 모은다."""
     reviews = []
@@ -121,7 +148,7 @@ def _find_reviews(soup):
             if el.find(["p", "li", "div"]):
                 continue  # 가장 안쪽 글자만
             text = re.sub(r"\s+", " ", el.get_text(" ")).strip()
-            if 10 <= len(text) <= 300:
+            if len(text) <= 300 and _looks_like_review(text):
                 reviews.append(text)
     return reviews
 
@@ -147,13 +174,16 @@ def clean_title(title):
 def parse(html):
     soup = BeautifulSoup(html, "html.parser")
     ld = _json_ld(soup)
+    frames = [f.get("src") for f in soup.find_all("iframe")
+              if f.get("src") and re.search(r"review|cre\.ma|vreview|리뷰", f.get("src"), re.I)]
+    table_ingredients = _find_ingredients_in_table(soup)
     for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
         tag.decompose()
 
     lines = _lines(soup)
-    reviews = list(dict.fromkeys(ld["reviews"] + _find_reviews(soup)))[:50]
+    reviews = list(dict.fromkeys([r for r in ld["reviews"] if len(r) >= 5] + _find_reviews(soup)))[:50]
     review_set = set(reviews)
-    ingredients = _find_ingredients(lines)
+    ingredients = table_ingredients or _find_ingredients(lines)
 
     title = ld["name"] or _meta(soup, "og:title") or (soup.title.get_text(strip=True) if soup.title else "")
     description = ld["description"] or _meta(soup, "og:description", "description")
@@ -172,8 +202,97 @@ def parse(html):
         notes.append("광고 문구를 찾지 못했어요.")
 
     return {"title": clean_title(title), "ad": ad_text, "ingredients": ingredients,
-            "reviews": "\n".join(reviews), "notes": notes}
+            "reviews": "\n".join(reviews), "notes": notes, "frames": frames}
+
+
+# ---------------------------------------------------------------------------
+# 리뷰를 따로 불러오는 사이트를 위한 추가 경로
+# ---------------------------------------------------------------------------
+def _product_no(url):
+    q = parse_qs(urlparse(url).query)
+    if "product_no" in q:
+        return q["product_no"][0]
+    m = re.search(r"/product/[^/]+/(\d+)/", url) or re.search(r"/surl/p/(\d+)", url)
+    return m.group(1) if m else None
+
+
+def _reviews_from_page(url):
+    try:
+        soup = BeautifulSoup(fetch_html(url, timeout=6), "html.parser")
+    except FetchError:
+        return []
+    return _find_reviews(soup)
+
+
+def _cafe24_board(url, product_no, limit=10):
+    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 후기 제목과 내용을 읽는다."""
+    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+    list_url = f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}"
+    try:
+        soup = BeautifulSoup(fetch_html(list_url, timeout=6), "html.parser")
+    except FetchError:
+        return []
+    links = []
+    for a in soup.find_all("a", href=True):
+        title = re.sub(r"\s+", " ", a.get_text(" ", strip=True))
+        if re.search(r"/article/|board/product/read\.html", a["href"]) and len(title) >= 4:
+            links.append((title, urljoin(base, a["href"])))
+    links = list(dict(links).items())[:limit] if links else []
+
+    def read(item):
+        title, link = item
+        try:
+            page = BeautifulSoup(fetch_html(link, timeout=6), "html.parser")
+        except FetchError:
+            return title
+        boxes = [re.sub(r"\s+", " ", d.get_text(" ", strip=True))
+                 for d in page.find_all(attrs={"class": re.compile(r"detail|fr-view|view|content", re.I)})]
+        boxes = [b for b in boxes if 5 <= len(b) <= 1500]
+        body = max(boxes, key=len) if boxes else ""
+        return body if len(body) >= 10 else f"{title} {body}".strip()
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        texts = list(pool.map(read, links))
+    return [t[:300] for t in texts if len(t) >= 8]
+
+
+def _crema(url, product_no):
+    """CREMA(크리마) 리뷰 서비스를 쓰는 쇼핑몰의 리뷰 화면을 읽는다."""
+    host = urlparse(url).netloc
+    domain = re.sub(r"^(www|m)\.", "", host)
+    return _reviews_from_page(f"https://review4.cre.ma/{domain}/products/reviews?product_code={product_no}&iframe=1")
 
 
 def read_link(url):
-    return parse(fetch_html(url.strip()))
+    url = url.strip()
+    result = parse(fetch_html(url))
+    reviews = result["reviews"].split("\n") if result["reviews"] else []
+    sources = []
+    if len(reviews) < 3:
+        extra = []
+        for src in result["frames"]:
+            got = _reviews_from_page(urljoin(url, src))
+            if got:
+                extra += got
+                sources.append("리뷰 창")
+        product_no = _product_no(url)
+        if product_no and not extra:
+            got = _cafe24_board(url, product_no)
+            if got:
+                extra += got
+                sources.append("상품 후기 게시판")
+        if product_no and not extra:
+            got = _crema(url, product_no)
+            if got:
+                extra += got
+                sources.append("크리마 리뷰")
+        if extra:
+            reviews = list(dict.fromkeys(reviews + extra))[:50]
+            result["reviews"] = "\n".join(reviews)
+            result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")]
+        elif not reviews:
+            result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")] + [
+                "리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
+                "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요."]
+    result["sources"] = sources
+    return result

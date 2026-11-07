@@ -36,6 +36,7 @@ for key in ("ad", "ingredients", "reviews", "title"):
     st.session_state.setdefault(key, "")
 st.session_state.setdefault("notes", [])
 st.session_state.setdefault("auto_run", False)
+st.session_state.setdefault("found", "")
 
 
 def load_link():
@@ -47,20 +48,32 @@ def load_link():
     try:
         result = fetcher.read_link(url)
     except fetcher.FetchError as e:
-        st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False)
+        st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False, found="")
         return
     st.session_state.update(title=result["title"], ad=result["ad"], ingredients=result["ingredients"],
-                            reviews=result["reviews"], notes=result["notes"], auto_run=True)
+                            reviews=result["reviews"], notes=result["notes"], auto_run=True,
+                            found=_found_summary(result))
+
+
+def _found_summary(result):
+    n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
+    n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
+    where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
+    mark = lambda ok: "✅" if ok else "❌"
+    return (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개 · "
+            f"리뷰 {mark(n_rev)} {n_rev}개{where}")
 
 
 def load_sample(name):
-    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False)
+    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="")
 
 
 u1, u2 = st.columns([5, 1], vertical_alignment="bottom")
 u1.text_input("🔗 제품 페이지 링크", key="url", placeholder="광고에서 본 제품 페이지 주소를 붙여넣어 주세요 (https://...)")
 u2.button("분석하기 ✨", on_click=load_link, type="primary", width="stretch")
 
+if st.session_state["found"]:
+    st.info(st.session_state["found"])
 for note in st.session_state["notes"]:
     st.warning(note)
 
