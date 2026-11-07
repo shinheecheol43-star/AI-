@@ -294,5 +294,20 @@ def read_link(url):
             result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")] + [
                 "리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
                 "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요."]
+    # 좋다/별로 같은 평가도, 보습·향 같은 항목도 없는 글은 리뷰가 아니라 안내 문구일 가능성이 높아서 뺀다
+    kept = [r for r in (result["reviews"].split("\n") if result["reviews"] else []) if _has_opinion(r)]
+    if result["reviews"] and not kept:
+        result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")] + [
+            "리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
+            "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요."]
+        sources = []
+    result["reviews"] = "\n".join(kept)
     result["sources"] = sources
     return result
+
+
+def _has_opinion(text):
+    clauses = az._clauses(text)
+    if any(az._polarity(c) for c in clauses):
+        return True
+    return any(az._aspect_hit(c, p, n, t) for c in clauses for t, p, n in az.ASPECTS.values())
