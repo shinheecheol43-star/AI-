@@ -15,6 +15,7 @@ ROSE = "#E5537A"
 
 CSS = """
 <style>
+:root, html, body { color-scheme: only light !important; }
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 html, body, [class*="css"], .stApp, .stMarkdown, button, input, textarea, select {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif !important;
@@ -230,3 +231,18 @@ def ad_check(ad):
                  '<div class="muted" style="margin-top:6px">인플루언서 게시물이라면 뒷광고인지 확인해 보세요. '
                  '(브랜드 공식몰은 표기가 없어도 괜찮아요)</div>')
     show(f'<div class="card">{"".join(parts)}<div style="margin-top:14px">{disclosed}</div></div>')
+
+
+def topic_cards(items):
+    if not items:
+        show('<div class="card muted">여러 리뷰에서 반복된 이야기가 아직 없어요. 리뷰가 많을수록 잘 찾아요.</div>')
+        return
+    html_parts = ""
+    for t in items:
+        color, bg, mood = ((GOOD, GOOD_BG, "주로 좋은 반응") if t["tone"] > 0 else
+                           (BAD, BAD_BG, "주로 아쉬운 반응") if t["tone"] < 0 else ("#6B5E68", "#F3EEF0", "반응 섞임/중립"))
+        others = "".join(f'<div class="muted" style="margin-top:3px">· {esc(o)}</div>' for o in t["others"])
+        html_parts += (f'<div class="quote" style="background:{bg}; border-left:5px solid {color};">'
+                       f'<div class="head" style="color:{color}">“{esc(t["word"])}”<span>{t["count"]}명이 언급 · {mood}</span></div>'
+                       f'<div class="body">“{esc(t["quote"])}”</div>{others}</div>')
+    show(html_parts)

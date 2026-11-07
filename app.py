@@ -8,6 +8,7 @@ import streamlit as st
 
 import analyzer as az
 import fetcher
+import review_mining as rm
 import ui
 from sample_data import SAMPLES
 
@@ -122,6 +123,8 @@ with tab_review:
         with b:
             ui.section("아쉬운 점 TOP 3")
             ui.quote_cards(summary["bad"], good=False)
+        ui.section("🔁 리뷰에서 많이 나온 이야기", "여러 사람이 반복해서 쓴 단어를 찾아 비슷한 문장끼리 묶었어요.")
+        ui.topic_cards(rm.mine(rev_text)["topics"])
         ui.section("💬 항목별 반응", "초록은 좋다는 의견, 빨강은 아쉽다는 의견이에요.")
         ui.aspect_bars(reviews["aspects"])
         with st.expander("숫자로 자세히 보기"):
@@ -129,7 +132,10 @@ with tab_review:
             if reviews["by_skin"]:
                 st.dataframe(pd.DataFrame(reviews["by_skin"]).T, width="stretch")
     else:
-        ui.show('<div class="card muted">리뷰가 없어요. 리뷰를 붙여넣으면 요약해 드려요.</div>')
+        ui.show('<div class="card"><b>😢 이 페이지에서 리뷰를 가져오지 못했어요.</b>'
+                '<div class="muted" style="margin-top:6px">많은 쇼핑몰은 리뷰를 페이지가 열린 뒤 따로 불러와서, '
+                '링크만으로는 리뷰 글이 보이지 않아요.<br>쇼핑몰 리뷰 화면에서 리뷰 글을 길게 눌러 <b>복사</b>한 뒤, '
+                '위의 <b>‘직접 붙여넣기’ → 실사용 리뷰</b> 칸에 붙여넣고 분석하기를 누르면 요약해 드려요.</div></div>')
 
 with tab_ing:
     ui.section("🧪 내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
@@ -144,7 +150,11 @@ with tab_ing:
 
 with tab_ad:
     ui.section("🔎 광고에서 말한 효과, 진짜일까?", "광고의 주장과 실제 리뷰 반응을 비교했어요.")
-    ui.claim_rows(claims)
+    if reviews["count"]:
+        ui.claim_rows(claims)
+    else:
+        ui.show('<div class="card muted">리뷰가 없어서 광고 내용과 비교할 수 없어요. '
+                '리뷰를 붙여넣으면 광고가 진짜인지 비교해 드려요.</div>')
     ui.section("📢 광고 문구 체크")
     ui.ad_check(ad)
 
