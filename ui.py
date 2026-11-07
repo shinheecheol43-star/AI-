@@ -171,14 +171,15 @@ def quote_cards(items, good=True):
 
 def ingredient_chips(rows):
     groups = [("⚠️ 주의", "주의가 필요한 성분", BAD, BAD_BG), ("✅ 잘 맞음", "나에게 잘 맞는 성분", GOOD, GOOD_BG),
-              ("➖ 보통", "특별한 영향이 없는 성분", "#6B5E68", "#F3EEF0")]
+              ("➖ 보통", "특별한 영향이 없는 성분", "#6B5E68", "#F3EEF0"),
+              ("❔ 사전에 없음", "아직 사전에 없는 성분 (판단 보류)", "#8A7A84", "#FFFFFF")]
     for key, title, color, bg in groups:
         items = [r for r in rows if r["나에게"] == key]
         if not items:
             continue
         chips = "".join(
             f'<span class="chip" style="background:{bg}; color:{color};" title="{esc(r["이유"])}">'
-            f'{esc(r["성분"])}<small>{esc(r["역할"])}</small></span>' for r in items)
+            f'{esc(r["성분"])}<small>{esc(r["역할"]) if r["역할"] != "정보 없음" else ""}</small></span>' for r in items)
         show(f'<div class="card"><div style="font-weight:800; margin-bottom:10px; color:{color}">'
              f'{key.split()[0]} {title} ({len(items)})</div>{chips}</div>')
 

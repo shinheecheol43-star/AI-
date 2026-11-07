@@ -30,7 +30,7 @@ INGREDIENTS = {
              "good": ["미백/잡티"], "caution": ["민감성"]},
     "아데노신": {"alias": ["아데노신", "adenosine"], "role": "주름 개선(기능성)",
              "good": ["주름/탄력"], "caution": []},
-    "알부틴": {"alias": ["알부틴", "arbutin"], "role": "미백(기능성)",
+    "알부틴": {"alias": ["알부틴", "알파-알부틴", "알파-아르부틴", "아르부틴", "arbutin"], "role": "미백(기능성)",
             "good": ["미백/잡티"], "caution": []},
     "스쿠알란": {"alias": ["스쿠알란", "squalane"], "role": "보습 오일",
              "good": ["건조/보습", "건성"], "caution": []},
@@ -54,6 +54,33 @@ INGREDIENTS = {
             "good": [], "caution": ["파라벤"]},
     "징크옥사이드": {"alias": ["징크옥사이드", "zinc oxide"], "role": "무기자차 성분",
                "good": ["민감성"], "caution": []},
+    "정제수": {"alias": ["정제수", "water", "aqua"], "role": "기본 베이스(물)", "good": [], "caution": []},
+    "글리세린": {"alias": ["글리세린", "glycerin"], "role": "기본 보습", "good": ["건조/보습"], "caution": []},
+    "부틸렌글라이콜": {"alias": ["부틸렌글라이콜", "butylene glycol"], "role": "보습·용매", "good": [], "caution": []},
+    "프로판다이올": {"alias": ["프로판다이올", "propanediol"], "role": "보습·용매", "good": [], "caution": []},
+    "1,2-헥산다이올": {"alias": ["1,2-헥산다이올", "헥산다이올", "hexanediol"], "role": "보습·보존 보조", "good": [], "caution": []},
+    "베타인": {"alias": ["베타인", "betaine"], "role": "보습", "good": ["건조/보습", "민감성"], "caution": []},
+    "알란토인": {"alias": ["알란토인", "allantoin"], "role": "진정", "good": ["진정/홍조", "민감성"], "caution": []},
+    "토코페롤": {"alias": ["토코페롤", "tocopherol"], "role": "항산화(비타민E)", "good": [], "caution": []},
+    "스쿠알렌/트라이글리세라이드": {"alias": ["카프릴릭/카프릭트라이글리세라이드", "카프릴릭"], "role": "보습 오일", "good": ["건성"], "caution": ["지성"]},
+    "다이메티콘": {"alias": ["다이메티콘", "dimethicone"], "role": "실리콘(매끄러운 사용감)", "good": [], "caution": ["여드름/트러블"]},
+    "카보머": {"alias": ["카보머", "carbomer"], "role": "점도 조절", "good": [], "caution": []},
+    "잔탄검": {"alias": ["잔탄검", "xanthan"], "role": "점도 조절", "good": [], "caution": []},
+    "페녹시에탄올": {"alias": ["페녹시에탄올", "phenoxyethanol"], "role": "방부제", "good": [], "caution": []},
+    "다이소듐이디티에이": {"alias": ["다이소듐이디티에이", "disodium edta"], "role": "안정제", "good": [], "caution": []},
+    "트로메타민": {"alias": ["트로메타민", "tromethamine"], "role": "pH 조절", "good": [], "caution": []},
+    "아줄렌": {"alias": ["아줄렌", "구아이아줄렌", "azulene"], "role": "진정", "good": ["진정/홍조", "민감성"], "caution": []},
+    "녹차추출물": {"alias": ["녹차추출물", "녹차잎추출물", "green tea"], "role": "진정·피지 조절", "good": ["지성", "여드름/트러블"], "caution": []},
+    "어성초추출물": {"alias": ["어성초추출물", "약모밀추출물"], "role": "트러블 진정", "good": ["여드름/트러블", "지성"], "caution": []},
+    "쑥추출물": {"alias": ["쑥추출물", "쑥잎추출물", "artemisia"], "role": "진정", "good": ["진정/홍조", "민감성"], "caution": []},
+    "프로폴리스": {"alias": ["프로폴리스", "propolis"], "role": "영양·진정", "good": ["건조/보습"], "caution": ["민감성"]},
+    "펩타이드": {"alias": ["펩타이드", "peptide"], "role": "탄력", "good": ["주름/탄력"], "caution": []},
+    "콜라겐": {"alias": ["콜라겐", "하이드롤라이즈드콜라겐", "collagen"], "role": "보습·탄력", "good": ["주름/탄력", "건조/보습"], "caution": []},
+    "징크피씨에이": {"alias": ["징크피씨에이", "징크pca", "zinc pca"], "role": "피지 조절", "good": ["지성", "모공", "여드름/트러블"], "caution": []},
+    "위치하젤": {"alias": ["위치하젤", "witch hazel"], "role": "수렴·피지 조절", "good": ["지성", "모공"], "caution": ["건성", "민감성"]},
+    "멘톨": {"alias": ["멘톨", "menthol"], "role": "청량감", "good": [], "caution": ["민감성"]},
+    "에센셜오일": {"alias": ["라벤더오일", "오렌지껍질오일", "레몬껍질오일", "로즈마리잎오일", "유칼립투스잎오일"], "role": "향 오일", "good": [], "caution": ["민감성", "에센셜오일", "향료"]},
+    "판토텐산/비타민": {"alias": ["바이오틴", "biotin"], "role": "영양", "good": [], "caution": []},
     "에칠헥실메톡시신나메이트": {"alias": ["에칠헥실메톡시신나메이트"], "role": "유기자차 성분",
                       "good": [], "caution": ["민감성"]},
 }
@@ -82,7 +109,14 @@ def analyze_ingredients(text, profile):
             verdict = "➖ 보통"
         reason = ", ".join(bad or good) or "-"
         rows.append({"성분": name, "역할": info["role"], "나에게": verdict, "이유": reason})
-    order = {"⚠️ 주의": 0, "✅ 잘 맞음": 1, "➖ 보통": 2}
+    # 사전에 없는 성분도 빠뜨리지 않고 보여준다
+    aliases = [a.lower() for info in INGREDIENTS.values() for a in info["alias"]]
+    for t in tokens:
+        name = re.sub(r"\(.*?\)|[\[\]*]", "", t).strip()
+        if 2 <= len(name) <= 30 and not any(name.startswith(a) for a in aliases):
+            rows.append({"성분": name, "역할": "정보 없음", "나에게": "❔ 사전에 없음", "이유": "-"})
+    order = {"⚠️ 주의": 0, "✅ 잘 맞음": 1, "➖ 보통": 2, "❔ 사전에 없음": 3}
+    rows = list({r["성분"]: r for r in rows}.values())
     rows.sort(key=lambda r: order[r["나에게"]])
     return rows
 
