@@ -268,7 +268,7 @@ def read_link(url):
     result = parse(fetch_html(url))
     reviews = result["reviews"].split("\n") if result["reviews"] else []
     sources = []
-    if len(reviews) < 3:
+    if len(reviews) < 10:  # 상품 페이지에서 찾은 게 적으면 (버튼 글자일 수도 있으니) 다른 곳도 찾아본다
         extra = []
         for src in result["frames"]:
             got = _reviews_from_page(urljoin(url, src))
@@ -287,7 +287,7 @@ def read_link(url):
                 extra += got
                 sources.append("크리마 리뷰")
         if extra:
-            reviews = list(dict.fromkeys(reviews + extra))[:50]
+            reviews = list(dict.fromkeys(extra + reviews))[:50]
             result["reviews"] = "\n".join(reviews)
             result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")]
         elif not reviews:
