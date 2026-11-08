@@ -58,7 +58,7 @@ def _where(words, sentences):
 def _where_all(words, sentences):
     hits = [s for s in sentences if any(w.lower() in s.lower() for w in words)]
     real = [s for s in hits if not re.fullmatch(r"(#\S+\s*)+", s)]  # 해시태그만 있는 줄은 뒤로
-    return real + [s for s in hits if s not in real]
+    return real or hits
 
 
 def build(ad_text, reviews, review_text):
