@@ -336,7 +336,7 @@ def analyze_reviews(text, skin_type):
             result["quotes"][a][key].append(_quote(r, clause))
 
         # 리뷰 전체의 느낌: 조각별 긍정/부정 + 항목별 평가를 합쳐서 판단
-        pols = [_polarity(c) for c in _clauses(r)] + list(hits.values())
+        pols = [_polarity(c) for c in _clauses(r)] + [h for h, _ in hits.values()]
         pos, neg = pols.count(1), pols.count(-1)
         if pos and neg:
             label = "mixed"
