@@ -6,7 +6,7 @@
              '엄격' 조건이면 FVG 아랫변이 OB 고가보다 위 (OB → FVG 순서가 겹치지 않고 위로)
   3) FVG   : 마지막 저점 이후 ~ 돌파 봉 2봉 뒤까지 생긴 첫 상승 FVG (1번 고가 < 3번 저가, 2번 양봉)
   4) 진입  : CHoCH 와 FVG 가 모두 확인된 다음 봉부터 20봉 동안 FVG 에 지정가
-             진입가 = FVG 윗변 또는 FVG 중간(50%). 그 전에 손절가에 먼저 닿으면 취소
+             진입가 = FVG 윗변 또는 FVG 중간(50%). 손절가는 진입가 아래라 가격이 손절까지 가면 반드시 먼저 체결됨
   손절    : OB 저가 − 0.1 ATR  또는  FVG 아랫변 − 0.1 ATR
             (손절폭이 0.3 ATR 미만이거나 6 ATR 초과면 건너뜀)
   목표    : 1.5R · 2R · 3R (지정가).  최대 보유 5분 288봉 · 15분 96봉 · 30분 96봉 · 1시간 48봉 · 4시간 30봉
@@ -75,8 +75,6 @@ def run(sym, tf, side, S, stop_mode, entry_mode, use_reg, strict):
             continue
         e = None
         for u in range(s["start"], min(n - hold - 1, s["start"] + WAIT)):
-            if l[u] <= stop:
-                break
             if l[u] <= limit:
                 e = u
                 break
