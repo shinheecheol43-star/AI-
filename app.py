@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 import analyzer as az
+import ad_report
 import fetcher
 import review_mining as rm
 import ui
@@ -178,13 +179,31 @@ with tab_ing:
         ui.show('<div class="card muted">분석할 수 있는 성분이 없어요. 전성분을 붙여넣어 주세요.</div>')
 
 with tab_ad:
-    ui.section("🔎 광고에서 말한 효과, 진짜일까?", "광고의 주장과 실제 리뷰 반응을 비교했어요.")
-    if reviews["count"]:
-        ui.claim_rows(claims)
-    else:
+    rep = ad_report.build(ad_text, reviews, rev_text)
+    ui.section(f"📊 광고 신뢰도 {trust}점은 이렇게 나왔어요", "100점에서 시작해 문제가 있을 때마다 깎았어요.")
+    ui.trust_breakdown(trust, rep["breakdown"])
+
+    ui.section("🔎 광고에서 말한 효과, 리뷰로 확인해 봤어요",
+               "광고 문장 → 그 내용을 언급한 리뷰 → 실제 리뷰 순서로 보여드려요.")
+    if not ad_text:
+        ui.show('<div class="card muted">광고 문구가 없어서 비교할 수 없어요.</div>')
+    elif not reviews["count"]:
         ui.show('<div class="card muted">리뷰가 없어서 광고 내용과 비교할 수 없어요. '
                 '리뷰를 붙여넣으면 광고가 진짜인지 비교해 드려요.</div>')
-    ui.section("📢 광고 문구 체크")
-    ui.ad_check(ad)
+    elif rep["claims"]:
+        ui.claim_cards(rep["claims"], rep["n_reviews"])
+        if rep["unchecked"]:
+            st.caption(f"리뷰로 확인하지 못한 주장: {', '.join(rep['unchecked'])} → 샘플로 직접 확인해 보는 게 좋아요.")
+    else:
+        ui.show('<div class="card muted">광고에서 보습·진정·트러블 같은 효과 주장을 찾지 못했어요.</div>')
+
+    ui.section("🔢 숫자·시험 결과 광고, 이렇게 읽으세요")
+    ui.number_and_tests(rep["numbers"], rep["has_condition"], rep["tests"])
+
+    ui.section("😮 조심해서 볼 광고 표현")
+    ui.flagged_words(rep["exaggerations"], rep["medical"], rep["disclosed"])
+
+    ui.section("🗣️ 광고를 언급한 실제 리뷰", "‘광고’, ‘인스타’, ‘상세페이지’ 등을 언급한 리뷰예요.")
+    ui.ad_mentions(rep["ad_mentions"])
 
 st.caption("※ 이 분석은 참고용이에요. 피부 반응은 개인차가 있으니 패치 테스트를 권장해요.")

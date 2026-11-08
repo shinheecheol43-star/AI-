@@ -90,6 +90,8 @@ footer { visibility: hidden; }
   font-size: .85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ing-main { flex: 1; min-width: 0; }
 .ing-desc { font-size: .88rem; color: #6B5E68; margin-top: 3px; }
+.ad-quote { background: #FFF5F7; border: 1px dashed #F2B8C6; border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-weight: 600; }
+.mini-quote { border-left: 4px solid; background: #FFFBFA; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: .9rem; color: #4A3B47; }
 .mini { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: .72rem; font-weight: 700; margin-left: 4px; }
 @media (max-width: 640px) {
   .block-container { padding-top: 2.6rem; }
@@ -307,3 +309,91 @@ def ingredient_list(rows):
                   f'<span class="badge" style="background:{bg}; color:{color}; border:1px solid {color}33">'
                   f'{esc(verdict)}{reason}</span></div>')
     show(f'<div class="card">{items}</div>')
+
+
+def trust_breakdown(score, items):
+    color = _tone(score)
+    rows = ""
+    for label, delta in items:
+        if delta == 0:
+            rows += (f'<div class="claim"><div>⚠️ {esc(label)}</div>'
+                     f'<b style="color:{WARN}">감점 없음</b></div>')
+            continue
+        sign_color = "#2D1B2E" if delta > 0 else BAD
+        rows += (f'<div class="claim"><div>{esc(label)}</div>'
+                 f'<b style="color:{sign_color}">{"+" if delta > 0 else ""}{delta}</b></div>')
+    if all(d >= 0 for _, d in items):
+        rows += '<div class="muted" style="padding-top:8px">감점할 만한 과장 표현이나 리뷰와 다른 주장이 없었어요.</div>'
+    show(f'<div class="card"><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:6px">'
+         f'<span style="font-size:2rem; font-weight:800; color:{color}">{score}점</span>'
+         f'<span class="muted">광고 신뢰도 계산 과정</span></div>{rows}</div>')
+
+
+def claim_cards(cards, n_reviews):
+    styles = {"✅": (GOOD, GOOD_BG), "❌": (BAD, BAD_BG), "🔶": (WARN, WARN_BG), "❔": ("#6B5E68", "#F3EEF0")}
+    for c in cards:
+        color, bg = styles.get(c["verdict"][0], styles["❔"])
+        total = c["good"] + c["bad"]
+        bar = ""
+        if total:
+            bar = (f'<div class="bar-row"><div class="bar-track" style="height:16px">'
+                   f'<div style="width:{c["good"] / total * 100}%; background:{GOOD}"></div>'
+                   f'<div style="width:{c["bad"] / total * 100}%; background:{BAD}"></div></div>'
+                   f'<div class="bar-num" style="width:110px">👍{c["good"]} 👎{c["bad"]}</div></div>'
+                   f'<div class="muted">전체 리뷰 {n_reviews}개 중 이 내용을 언급한 리뷰는 {total}개예요.</div>')
+        quotes = ""
+        for q in c["good_quotes"]:
+            quotes += f'<div class="mini-quote" style="border-color:{GOOD}">👍 “{esc(q)}”</div>'
+        for q in c["bad_quotes"]:
+            quotes += f'<div class="mini-quote" style="border-color:{BAD}">👎 “{esc(q)}”</div>'
+        show(f'<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; gap:10px">'
+             f'<div style="font-weight:800; font-size:1.08rem">{esc(c["aspect"])}</div>'
+             f'<span class="badge" style="background:{bg}; color:{color}">{esc(c["verdict"])}</span></div>'
+             f'<div class="ad-quote">📢 광고: “{esc(c["ad_sentence"])}”</div>{bar}'
+             f'<div style="margin:10px 0 6px 0; font-weight:700; color:{color}">→ {esc(c["why"])}</div>{quotes}</div>')
+
+
+def number_and_tests(numbers, has_condition, tests):
+    parts = ""
+    if numbers:
+        chips = "".join(f'<span class="chip" style="background:#FFE8EE; color:{ROSE}">{esc(n)}</span>' for n in numbers)
+        cond = ("광고 글에 시험 조건(인원·기간 등)도 적혀 있어요. 함께 확인해 보세요." if has_condition else
+                "⚠️ 광고 글에서는 <b>몇 명이, 얼마 동안</b> 시험했는지 찾지 못했어요. 상세페이지 이미지 아래쪽의 작은 글씨를 확인해 보세요.")
+        parts += (f'<div style="font-weight:800; margin-bottom:8px">🔢 숫자로 말한 효과</div>{chips}'
+                  f'<div class="muted" style="margin:4px 0 6px 0">숫자는 보통 ‘시험 전과 비교해 평균적으로 얼마나 변했는지’예요. '
+                  f'모든 사람이 그만큼 좋아진다는 뜻은 아니에요.</div><div class="muted">{cond}</div>')
+    for t in tests:
+        parts += (f'<div class="claim" style="display:block"><div><b>🧪 {esc(t["label"])}</b> '
+                  f'<span class="muted">· 광고: “{esc(t["sentence"])}”</span></div>'
+                  f'<div class="ing-desc">{esc(t["meaning"])}</div></div>')
+    if not parts:
+        parts = '<div class="muted">숫자나 시험·인증을 내세운 광고 문구는 없었어요.</div>'
+    show(f'<div class="card">{parts}</div>')
+
+
+def flagged_words(exaggerations, medical, disclosed):
+    items = ""
+    for e in exaggerations:
+        items += (f'<div class="claim" style="display:block"><span class="chip" style="background:{WARN_BG}; color:{WARN}">😮 {esc(e["word"])}</span>'
+                  f'<span class="muted">“{esc(e["sentence"])}”</span><div class="ing-desc">{esc(e["reason"])}</div></div>')
+    for m in medical:
+        items += (f'<div class="claim" style="display:block"><span class="chip" style="background:{BAD_BG}; color:{BAD}">🚫 {esc(m["word"])}</span>'
+                  f'<span class="muted">“{esc(m["sentence"])}”</span><div class="ing-desc">{esc(m["reason"])}</div></div>')
+    if not items:
+        items = f'<div style="font-weight:800; color:{GOOD}">👌 과장 표현이나 의약품처럼 보이게 하는 표현은 없었어요.</div>'
+    disclosed_html = (f'<span class="badge" style="background:{GOOD_BG}; color:{GOOD}">✅ 광고 표기 있음</span>'
+                      if disclosed else
+                      f'<span class="badge" style="background:{BAD_BG}; color:{BAD}">❌ 광고 표기 없음</span>'
+                      '<span class="muted"> 인플루언서 게시물이라면 뒷광고인지 확인해 보세요. (브랜드 공식몰은 표기가 없어도 괜찮아요)</span>')
+    show(f'<div class="card">{items}<div style="margin-top:12px">{disclosed_html}</div></div>')
+
+
+def ad_mentions(items):
+    if not items:
+        show('<div class="card muted">리뷰 중에 광고를 언급한 글은 없었어요.</div>')
+        return
+    rows = ""
+    for text, tone in items:
+        color, icon = (GOOD, "👍") if tone > 0 else (BAD, "👎") if tone < 0 else ("#6B5E68", "🤔")
+        rows += f'<div class="mini-quote" style="border-color:{color}">{icon} “{esc(text)}”</div>'
+    show(f'<div class="card">{rows}</div>')

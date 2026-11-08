@@ -242,6 +242,8 @@ def _polarity(text):
 # 예: "따가움 전혀 없어요", "번들거림 잡아줘요", "여드름이 많이 줄었어요"
 RESOLVED_AFTER = ["없", "않", "안 ", "안나", "안올라", "안 올라", "줄", "잡아", "잡혀", "잡히", "잡혔", "가라앉",
                   "덜", "사라", "들어가", "들어갔", "진정", "개선", "해결", "좋아졌", "괜찮", "기 전", "예방", "관리용"]
+OTHER_PRODUCT = ["다른 제품", "다른 화장품", "수많은", "이것저것", "여러 제품", "제품써 봤", "제품 써 봤", "제품들 써",
+                 "안 써본", "다 써봤", "온갖"]
 RESOLVED_BEFORE = ["전혀", "하나도", "없이", "안쓰면", "안 쓰면", "끊으면", "안 바르면", "안바르면"]
 # 예전 피부 상태를 설명하는 말 ("여드름의 노예였는데", "트러블이 심해서 샀는데") → 제품 평가가 아니므로 무시
 PAST_AFTER = ["였는데", "었는데", "였던", "었던", "였어서", "이라 고민", "라서 구매", "때문에 구매", "때문에 주문", "해서 샀", "해서 구매"]
@@ -325,9 +327,14 @@ def analyze_reviews(text, skin_type):
               "by_skin": {}}
     for r in reviews:
         hits = {}
+        other = False  # "다른 제품 써봤지만 효과를 못봤어요" → 이 제품 이야기가 아님
         for clause in _clauses(r):
+            if any(o in clause for o in OTHER_PRODUCT):
+                other = True
             for a, (topic, p_words, n_words) in ASPECTS.items():
                 hit = _aspect_hit(clause, p_words, n_words, topic)
+                if hit == -1 and other:
+                    continue
                 if hit:
                     hits[a] = (hit, clause)  # 같은 리뷰에서 뒤에 나온 의견을 우선
         for a, (hit, clause) in hits.items():
@@ -336,7 +343,13 @@ def analyze_reviews(text, skin_type):
             result["quotes"][a][key].append(_quote(r, clause))
 
         # 리뷰 전체의 느낌: 조각별 긍정/부정 + 항목별 평가를 합쳐서 판단
-        pols = [_polarity(c) for c in _clauses(r)] + [h for h, _ in hits.values()]
+        pols, seen_other = [], False
+        for c in _clauses(r):
+            seen_other = seen_other or any(o in c for o in OTHER_PRODUCT)
+            pol = _polarity(c)
+            if not (pol == -1 and seen_other):
+                pols.append(pol)
+        pols += [h for h, _ in hits.values()]
         pos, neg = pols.count(1), pols.count(-1)
         if pos and neg:
             label = "mixed"
