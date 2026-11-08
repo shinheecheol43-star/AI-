@@ -121,7 +121,7 @@ def simulate(sym, tf, side, k, entry_mode, use_reg, tgt):
                     break
             if e is None:
                 continue
-            px, fee_in = min(top, o[e]), MAKER
+            px, fee_in = (top if o[e] <= stop else min(top, o[e])), MAKER
             first_bar_stop = l[e] <= stop
         dist = px - stop
         if not (0.5 * atr[t] <= dist <= 5 * atr[t]) or e + hold >= n:

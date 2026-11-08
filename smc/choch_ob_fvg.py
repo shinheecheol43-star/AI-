@@ -80,7 +80,8 @@ def run(sym, tf, side, S, stop_mode, entry_mode, use_reg, strict):
                 break
         if e is None:
             continue
-        E.append(e); P.append(min(limit, o[e])); ST.append(stop)
+        px = limit if o[e] <= stop else min(limit, o[e])      # 손절 아래로 갭이면 지정가에 체결된 셈 치고 바로 손절(보수적)
+        E.append(e); P.append(px); ST.append(stop)
     return np.array(E, int), np.array(P, float), np.array(ST, float)
 
 
