@@ -29,7 +29,7 @@ STOPWORDS = {
 
 # '쓰는데', '사용중', '재구매했' 처럼 '썼다/샀다'는 뜻이라 내용이 없는 단어들
 STOP_PREFIX = ("쓰", "써", "사용", "바르", "발라", "구매", "재구매", "주문", "재주문", "여전", "열심", "있습", "있어", "꾸준",
-               "다년", "몇년", "매년", "매달", "주로")
+               "다년", "몇년", "매년", "매달", "주로", "모르", "좋아", "기대", "바라", "바래", "감사", "구매", "구입")
 
 
 def stem(word):
@@ -90,7 +90,9 @@ def topics(reviews, top=8):
         used.update(sents)
         word = min(m["forms"], key=lambda f: (-m["forms"][f], len(f)))
         tone = sum(_tone(reviews[i]) for i in review_ids)
-        same = [x for x in sents if _tone(x) * tone >= 0] or sents  # 대표 문장은 다수 의견과 같은 쪽에서
+        sign = (tone > 0) - (tone < 0)
+        same = ([x for x in sents if sign and _tone(x) == sign]          # 다수 의견과 같은 쪽의 '의견 있는' 문장
+                or [x for x in sents if _tone(x) * tone >= 0] or sents)
         quote = min(same, key=lambda x: abs(len(x) - 22))
         result.append({"word": word, "count": len(review_ids), "tone": tone,
                        "quote": quote, "others": [x for x in sents if x != quote][:3]})

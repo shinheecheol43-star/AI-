@@ -504,7 +504,7 @@ def summarize_reviews(reviews, skin_type):
     n = reviews["count"]
     if n == 0:
         return {"text": "분석할 리뷰가 없어요.", "good": [], "bad": []}
-    aspects = reviews["aspects"]
+    aspects = {a: v for a, v in reviews["aspects"].items() if a != "배송"}  # TOP 3는 제품 이야기만
     good = sorted((a for a in aspects if aspects[a]["좋음"]), key=lambda a: -aspects[a]["좋음"])[:3]
     bad = sorted((a for a in aspects if aspects[a]["아쉬움"]), key=lambda a: -aspects[a]["아쉬움"])[:3]
 
