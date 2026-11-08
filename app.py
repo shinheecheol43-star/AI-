@@ -43,9 +43,19 @@ st.session_state.setdefault("review_dates", [])
 st.session_state.setdefault("sampled_evenly", False)
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def read_link_cached(url, limit, _progress=None):
-    return fetcher.read_link(url, limit, _progress)
+@st.cache_resource
+def _link_store():
+    return {}  # (링크, 리뷰 수) → (읽은 시각, 결과). 같은 링크는 1시간 동안 다시 읽지 않음
+
+
+def read_link_cached(url, limit, progress=None):
+    import time
+    store, key = _link_store(), (url, limit)
+    if key in store and time.time() - store[key][0] < 3600:
+        return store[key][1]
+    result = fetcher.read_link(url, limit, progress)
+    store[key] = (time.time(), result)
+    return result
 
 
 def load_link():
