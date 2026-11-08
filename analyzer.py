@@ -159,7 +159,7 @@ def ingredient_report(text, profile):
         elif marker:
             r["함량"] = "1% 이상"
         else:
-            r["함량"] = "적은 편"
+            r["함량"] = "앞쪽보다 적음"
         # 기능성 원료가 충분히 들어 있을 만한 위치인지
         dose = FUNCTIONAL_DOSE.get(r["사전 이름"])
         if dose:

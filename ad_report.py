@@ -163,6 +163,8 @@ def build(ad_text, reviews, review_text, ing_rows=None):
             ing.append((f"‘{sp['keyword']}’ 효과를 뒷받침하는 대표 성분이 전성분에 없음", -5))
         elif all(f[2] in ("1% 이하", "최대 1%") for f in sp["found"]):
             ing.append((f"‘{sp['keyword']}’ 효과 성분이 1% 이하로만 들어 있음", -3))
+        elif len(sp["found"]) == 1:
+            ing.append((f"‘{sp['keyword']}’ 효과의 근거 성분이 {sp['found'][0][0]} 1개뿐", -2))
     add("④ 성분 근거", ing, -15)
 
     disappointed = sum(1 for r in az.split_reviews(review_text)

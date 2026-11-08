@@ -290,7 +290,7 @@ def ingredient_list(rows):
               "❔ 사전에 없음": ("#8A7A84", "#FFFFFF")}
     items, divided = "", False
     amount_style = {"가장 많음": ("#2D1B2E", "#F3EEF0"), "많은 편": ("#2D1B2E", "#F7F1F3"), "1% 이상": ("#6B5E68", "#F7F1F3"),
-                    "적은 편": ("#8A7A84", "#FFFFFF"), "최대 1%": (WARN, WARN_BG), "1% 이하": ("#8A7A84", "#FFFFFF")}
+                    "앞쪽보다 적음": ("#8A7A84", "#FFFFFF"), "최대 1%": (WARN, WARN_BG), "1% 이하": ("#8A7A84", "#FFFFFF")}
     for r in rows:
         if r.get("함량") == "1% 이하" and not divided:
             items += ('<div class="one-pct">── 여기부터는 <b>1% 이하</b>로 들어 있어요 '
@@ -347,7 +347,9 @@ def trust_breakdown(score, items):
     show(f'<div class="card"><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:4px; flex-wrap:wrap">'
          f'<span style="font-size:2rem; font-weight:800; color:{color}">{score}점</span>'
          f'<span style="font-weight:700; color:{color}">{esc(level)}</span></div>'
-         f'<div class="muted">100점에서 시작해 5가지 기준으로 깎았어요. 기준마다 최대로 깎을 수 있는 점수가 정해져 있어요.</div>'
+         f'<div class="muted">💡 광고 신뢰도는 <b>제품이 좋은지</b>가 아니라 <b>광고가 말한 내용을 근거로 잘 보여주는지</b>예요. '
+         f'제품 만족도는 ‘리뷰 만족도’를 보세요.<br>100점에서 시작해 5가지 기준으로 깎았어요. '
+         f'기준마다 최대로 깎을 수 있는 점수가 정해져 있어요.</div>'
          f'{rows}</div>')
 
 
@@ -460,6 +462,9 @@ def ingredient_alerts(summary):
     else:
         parts += ('<div class="mini-quote" style="border-color:#C9B8C0">📏 함량의 기준이 되는 성분(최대 1%로 정해진 방부제)이 없어서, '
                   '순서로만 양을 짐작했어요.</div>')
+    if summary.get("total", 99) < 10:
+        parts += (f'<div class="mini-quote" style="border-color:#C9B8C0">📝 페이지에 글자로 적힌 전성분이 '
+                  f'{summary["total"]}개뿐이에요. 실제 전성분이 더 길 수 있으니 제품 용기나 상세 이미지도 확인해 보세요.</div>')
     for msg in summary.get("combos", []):
         parts += f'<div class="mini-quote" style="border-color:{BAD}">⚠️ {esc(msg)}</div>'
     show(f'<div class="card">{parts}</div>')
