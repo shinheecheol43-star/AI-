@@ -528,3 +528,51 @@ def title_check(items, title):
 def site_summary(lines):
     rows = "".join(f'<div class="mini-quote" style="border-color:#C9B8C0">🏪 {esc(l)}</div>' for l in lines)
     show(f'<div class="card"><div class="muted">쇼핑몰이 직접 만든 리뷰 요약이에요. 판매자가 만든 글이라 분석 점수에는 넣지 않았어요.</div>{rows}</div>')
+
+
+def source_compare(rows):
+    """출처별 만족도 비교: [(이름, 만족 %, 평가 리뷰 수)]"""
+    html = ""
+    for label, sat, n in rows:
+        if sat is None or n < 3:
+            html += (f'<div class="bar-row"><div class="bar-label" style="width:190px">{esc(label)}</div>'
+                     f'<div class="muted" style="flex:1">{"평가가 담긴 글이 " + str(n) + "개라 비교 어려움" if n else "글 없음"}</div></div>')
+            continue
+        color = _tone(sat)
+        html += (f'<div class="bar-row"><div class="bar-label" style="width:190px">{esc(label)}</div>'
+                 f'<div class="bar-track" style="height:14px"><div style="width:{sat}%; background:{color}"></div></div>'
+                 f'<div class="bar-num" style="width:110px"><b style="color:{color}">{sat}%</b> · {n}개</div></div>')
+    sponsored = rows[-1]
+    plain = [r for r in rows[:-1] if r[1] is not None and r[2] >= 3]
+    tip = ""
+    if sponsored[1] is not None and sponsored[2] >= 3 and plain:
+        avg = sum(r[1] for r in plain) / len(plain)
+        if sponsored[1] - avg >= 10:
+            tip = (f'<div class="mini-quote" style="border-color:{WARN}">💡 협찬 표시가 있는 글의 만족도({sponsored[1]}%)가 '
+                   f'다른 후기 평균({avg:.0f}%)보다 높아요. 협찬 후기는 걸러서 보는 게 좋아요.</div>')
+    show(f'<div class="card"><div style="font-weight:800; margin-bottom:8px">출처별 만족도 비교</div>{html}{tip}'
+         f'<div class="muted" style="margin-top:8px">‘협찬 표시’는 요약 글에 협찬·체험단·제공받음 등이 보이는 경우예요. '
+         f'본문 끝에만 적혀 있으면 놓칠 수 있어요.</div></div>')
+
+
+def web_quotes(items, skin_type):
+    import analyzer as az
+    good, bad, seen = [], [], set()
+    for it in items:
+        if it["text"] in seen:
+            continue
+        seen.add(it["text"])
+        r = az.analyze_reviews(it["text"], skin_type)
+        if r["positive"] and len(good) < 3:
+            good.append(it)
+        elif (r["negative"] or r["mixed"]) and len(bad) < 3:
+            bad.append(it)
+    def card(it, color, icon):
+        meta = f'{it["source"]}{" · " + it["date"] if it["date"] else ""}'
+        link = (f' · <a href="{esc(it["link"])}" target="_blank" rel="noopener">원문 보기</a>'
+                if str(it.get("link", "")).startswith(("http://", "https://")) else "")
+        return (f'<div class="mini-quote" style="border-color:{color}">{icon} “{esc(it["text"][:120])}”'
+                f'<div class="muted" style="margin-top:4px">{esc(meta)}{link}</div></div>')
+    html = "".join(card(i, GOOD, "👍") for i in good) + "".join(card(i, BAD, "👎") for i in bad)
+    if html:
+        show(f'<div class="card"><div style="font-weight:800; margin-bottom:6px">인터넷 후기 예시 (협찬 표시 없는 글)</div>{html}</div>')

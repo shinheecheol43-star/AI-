@@ -223,7 +223,9 @@ def parse(html):
     if not ad_text:
         notes.append("광고 문구를 찾지 못했어요.")
 
-    return {"title": clean_title(title), "ad": ad_text, "ingredients": ingredients,
+    raw_title = soup.title.get_text(strip=True) if soup.title else ""
+    site = _meta(soup, "og:site_name") or (re.split(r"\s[-|]\s", raw_title)[-1] if re.search(r"\s[-|]\s", raw_title) else "")
+    return {"site_name": site.strip(), "title": clean_title(title), "ad": ad_text, "ingredients": ingredients,
             "reviews": "\n".join(reviews), "notes": notes, "frames": frames, "services": services}
 
 

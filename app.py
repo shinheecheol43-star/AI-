@@ -3,12 +3,15 @@
 실행: streamlit run app.py
 """
 
+import re
+
 import pandas as pd
 import streamlit as st
 
 import analyzer as az
 import ad_report
 import fetcher
+import web_search
 import review_mining as rm
 import ui
 from sample_data import SAMPLES
@@ -41,6 +44,8 @@ st.session_state.setdefault("found", "")
 st.session_state.setdefault("review_total", 0)
 st.session_state.setdefault("review_dates", [])
 st.session_state.setdefault("site_summary", [])
+st.session_state.setdefault("web_items", [])
+st.session_state.setdefault("web_query", "")
 st.session_state.setdefault("sampled_evenly", False)
 
 
@@ -72,6 +77,15 @@ def load_link():
                                                     text=f"리뷰 읽는 중… {done}/{total}개")
         result = read_link_cached(url, limit, progress)
         bar.empty()
+        web_items, web_query, web_ing_src = [], "", ""
+        if web_search.keys():
+            with st.spinner("블로그·카페에서 이 제품 후기를 더 찾는 중이에요…"):
+                web_items, web_query = web_search.collect_reviews(result["title"], result.get("site_name", ""))
+                if not result["ingredients"]:
+                    found_ing, web_ing_src = web_search.find_ingredients(result["title"], result.get("site_name", ""))
+                    if found_ing:
+                        result["ingredients"] = found_ing
+                        result["notes"] = [n for n in result["notes"] if not n.startswith("전성분을")]
     except fetcher.FetchError as e:
         st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False, found="")
         return
@@ -79,10 +93,12 @@ def load_link():
                             reviews=result["reviews"], notes=result["notes"], auto_run=True,
                             found=_found_summary(result), review_total=result.get("review_total", 0),
                             review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False),
-                            site_summary=result.get("site_summary", []))
+                            site_summary=result.get("site_summary", []), web_items=web_items, web_query=web_query,
+                            web_ing_src=web_ing_src)
+    st.session_state["found"] = _found_summary(result, web_items, web_ing_src)
 
 
-def _found_summary(result):
+def _found_summary(result, web_items=(), web_ing_src=""):
     n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
     n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
@@ -90,13 +106,21 @@ def _found_summary(result):
         how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
         where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
     mark = lambda ok: "✅" if ok else "❌"
-    return (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개 · "
-            f"리뷰 {mark(n_rev)} {n_rev}개{where}")
+    ing_where = " (인터넷 검색에서 찾은 앞부분)" if web_ing_src else ""
+    text = (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개{ing_where} · "
+            f"쇼핑몰 리뷰 {mark(n_rev)} {n_rev}개{where}")
+    if web_items:
+        blog = sum(i["source"] == "블로그" for i in web_items)
+        sponsored = sum(i["sponsored"] for i in web_items)
+        text += f"  \n🌐 인터넷 후기 · 블로그 {blog}개 · 카페 {len(web_items) - blog}개 (협찬 표시 {sponsored}개)"
+    elif not web_search.keys():
+        text += "  \n🌐 블로그·카페 후기 검색은 꺼져 있어요 (네이버 검색 API 키를 넣으면 켜져요)"
+    return text
 
 
 def load_sample(name):
     st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0,
-                            review_dates=[], sampled_evenly=False, site_summary=[])
+                            review_dates=[], sampled_evenly=False, site_summary=[], web_items=[], web_query="")
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
@@ -134,6 +158,12 @@ profile = {"skin_type": skin_type, "concerns": concerns, "avoid": avoid}
 # ---------------------------------------------------------------------------
 # 분석
 # ---------------------------------------------------------------------------
+web_items = st.session_state.get("web_items", [])
+web_text = "\n".join(i["text"] for i in web_items if not i["sponsored"])
+shop_reviews = az.analyze_reviews(rev_text, skin_type)
+combined = bool(web_text) and az.satisfaction(shop_reviews)[1] < 30
+if combined:  # 쇼핑몰 리뷰가 적으면 협찬 표시 없는 블로그·카페 후기를 더해서 분석
+    rev_text = "\n".join(x for x in (rev_text, web_text) if x)
 ingredients = az.analyze_ingredients(ing_text, profile)
 ad = az.analyze_ad(ad_text)
 reviews = az.analyze_reviews(rev_text, skin_type)
@@ -158,6 +188,8 @@ with m3:
         total = st.session_state.get("review_total", 0)
         moe = az.margin_of_error(sat, opinion_n, total)
         base = f"전체 {total:,}개 중 {reviews['count']}개 분석" if total > reviews["count"] else f"리뷰 {reviews['count']}개 분석"
+        if combined:
+            base = f"쇼핑몰 {shop_reviews['count']}개 + 블로그·카페 {reviews['count'] - shop_reviews['count']}개 분석"
         ui.score_card("리뷰 만족도", sat, "%", f"{base} · 평가 남긴 {opinion_n}개 기준 · 오차 ±{moe}%")
     else:
         ui.show('<div class="card score muted" style="padding:52px 20px">리뷰가 없어서<br>만족도를 계산하지 못했어요.</div>')
@@ -169,6 +201,25 @@ ui.verdict(verdict, fit, trust)
 tab_review, tab_ing, tab_ad = st.tabs(["📝 리뷰 요약", "🧪 성분 분석", "📢 광고 vs 실제"])
 
 with tab_review:
+    if combined:
+        st.caption("쇼핑몰 리뷰가 적어서, 협찬 표시가 없는 블로그·카페 후기를 함께 분석했어요.")
+    if web_items:
+        ui.section(f"🌐 블로그·카페 후기 {len(web_items)}개", f"네이버 검색 ‘{st.session_state.get('web_query', '')}’ 결과에서 "
+                   "이 제품 이야기인 글만 골랐어요. 글 전체가 아니라 검색 요약(앞부분)을 분석했어요.")
+        groups = [("🛍️ 쇼핑몰 리뷰", rev_text if not combined else st.session_state["reviews"])]
+        groups += [(f"☕ 카페 후기", "\n".join(i["text"] for i in web_items if i["source"] == "카페"))]
+        groups += [(f"📝 블로그 (협찬 표시 없음)", "\n".join(i["text"] for i in web_items if i["source"] == "블로그" and not i["sponsored"]))]
+        # 협찬 글은 리뷰 분석에서 원래 빠지므로, 협찬 문구를 지운 뒤 '내용'만 따로 평가
+        groups += [(f"💰 블로그·카페 (협찬 표시 있음)", "\n".join(
+            re.sub(r"[^.!?]*(협찬|체험단|제공받|원고료|서포터즈|무상으로|소정의|지원받)[^.!?]*[.!?]?", " ", i["text"])
+            for i in web_items if i["sponsored"]))]
+        compare = []
+        for label, text in groups:
+            r = az.analyze_reviews(text, skin_type) if text else None
+            sat, n = az.satisfaction(r) if r else (None, 0)
+            compare.append((label, sat, n))
+        ui.source_compare(compare)
+        ui.web_quotes([i for i in web_items if not i["sponsored"]], skin_type)
     if st.session_state.get("site_summary"):
         ui.section("🏪 쇼핑몰이 보여주는 리뷰 요약 (참고)")
         ui.site_summary(st.session_state["site_summary"])
