@@ -81,6 +81,12 @@ INGREDIENTS = {
     "멘톨": {"alias": ["멘톨", "menthol"], "role": "청량감", "good": [], "caution": ["민감성"]},
     "에센셜오일": {"alias": ["라벤더오일", "오렌지껍질오일", "레몬껍질오일", "로즈마리잎오일", "유칼립투스잎오일"], "role": "향 오일", "good": [], "caution": ["민감성", "에센셜오일", "향료"]},
     "판토텐산/비타민": {"alias": ["바이오틴", "biotin"], "role": "영양", "good": [], "caution": []},
+    "다이프로필렌글라이콜": {"alias": ["다이프로필렌글라이콜", "dipropylene glycol"], "role": "보습·용매", "good": [], "caution": []},
+    "글리세레스-26": {"alias": ["글리세레스-26", "glycereth-26"], "role": "보습·유화", "good": [], "caution": []},
+    "세테아릴알코올": {"alias": ["세테아릴알코올", "세틸알코올", "cetearyl", "cetyl alcohol"], "role": "지방 알코올(보습·유화)", "good": ["건성"], "caution": []},
+    "에칠헥실글리세린": {"alias": ["에칠헥실글리세린", "ethylhexylglycerin"], "role": "보습·보존 보조", "good": [], "caution": []},
+    "카프릴릴글라이콜": {"alias": ["카프릴릴글라이콜", "caprylyl glycol"], "role": "보습·보존 보조", "good": [], "caution": []},
+    "소듐시트레이트": {"alias": ["소듐시트레이트", "시트릭애씨드", "citric"], "role": "pH 조절", "good": [], "caution": []},
     "에칠헥실메톡시신나메이트": {"alias": ["에칠헥실메톡시신나메이트"], "role": "유기자차 성분",
                       "good": [], "caution": ["민감성"]},
 }
@@ -90,35 +96,73 @@ CONCERNS = ["여드름/트러블", "건조/보습", "미백/잡티", "주름/탄
 AVOID_OPTIONS = ["향료", "알코올", "파라벤", "에센셜오일"]
 
 
-def analyze_ingredients(text, profile):
-    """성분표 텍스트에서 아는 성분을 찾아 내 프로필 기준으로 좋음/주의로 분류."""
-    # 쉼표·줄바꿈으로 나눈 성분 이름의 '앞부분'으로 비교 (페녹시에탄올이 에탄올로 잡히지 않도록)
-    tokens = [t.strip().lower() for t in re.split(r"[,\n/·]", text) if t.strip()]
+def _tokens(text):
+    """전성분 글을 성분 이름 목록으로 (적힌 순서 그대로). '1,2-헥산다이올'처럼 이름 속 쉼표는 지킨다."""
+    text = re.sub(r"(\d),(\d)", r"\1§\2", text)
+    out = []
+    for t in re.split(r"[,\n/·]", text):
+        t = re.sub(r"\(.*?\)|[\[\]*]", "", t.replace("§", ",")).strip(" .")
+        if 2 <= len(t) <= 40:
+            out.append(t)
+    return list(dict.fromkeys(out))
+
+
+def _match(token):
+    low = token.lower()
+    for name, info in INGREDIENTS.items():
+        if any(low.startswith(a.lower()) for a in info["alias"]):
+            return name, info
+    return None, None
+
+
+def ingredient_report(text, profile):
+    """전성분을 적힌 순서대로 하나씩 설명하고, 요약 정보를 만든다."""
+    from ingredients_info import ALLERGENS, DESC, FUNCTIONAL, PRESERVATIVES, guess
     mine = {profile["skin_type"], *profile["concerns"], *profile["avoid"]}
     rows = []
-    for name, info in INGREDIENTS.items():
-        if not any(t.startswith(a.lower()) for t in tokens for a in info["alias"]):
-            continue
-        good = [g for g in info["good"] if g in mine]
-        bad = [c for c in info["caution"] if c in mine]
-        if bad:
-            verdict = "⚠️ 주의"
-        elif good:
-            verdict = "✅ 잘 맞음"
+    for idx, token in enumerate(_tokens(text), start=1):
+        name, info = _match(token)
+        if info:
+            good = [g for g in info["good"] if g in mine]
+            bad = [c for c in info["caution"] if c in mine]
+            verdict = "⚠️ 주의" if bad else "✅ 잘 맞음" if good else "➖ 보통"
+            category, desc, guessed = info["role"], DESC.get(name, ""), False
+            reason = ", ".join(bad or good)
         else:
-            verdict = "➖ 보통"
-        reason = ", ".join(bad or good) or "-"
-        rows.append({"성분": name, "역할": info["role"], "나에게": verdict, "이유": reason})
-    # 사전에 없는 성분도 빠뜨리지 않고 보여준다
-    aliases = [a.lower() for info in INGREDIENTS.values() for a in info["alias"]]
-    for t in tokens:
-        name = re.sub(r"\(.*?\)|[\[\]*]", "", t).strip()
-        if 2 <= len(name) <= 30 and not any(name.startswith(a) for a in aliases):
-            rows.append({"성분": name, "역할": "정보 없음", "나에게": "❔ 사전에 없음", "이유": "-"})
+            category, desc = guess(token)
+            verdict, reason, guessed = "❔ 사전에 없음", "", True
+            if not category:
+                category, desc = "기타", "아직 정보가 없는 성분이에요."
+        rows.append({
+            "순서": idx, "성분": token, "사전 이름": name or token, "분류": category, "설명": desc,
+            "나에게": verdict, "이유": reason, "추정": guessed,
+            "기능성": FUNCTIONAL.get(name or "", ""),
+            "알레르기": any(token.startswith(a) for a in ALLERGENS),
+            "방부제": any(token.startswith(p) for p in PRESERVATIVES) or category == "방부제",
+            "주요": idx <= 5,
+        })
+    summary = {
+        "total": len(rows),
+        "main": [r["성분"] for r in rows if r["주요"]],
+        "functional": [(r["성분"], r["기능성"]) for r in rows if r["기능성"]],
+        "allergens": [r["성분"] for r in rows if r["알레르기"]],
+        "fragrance": [r["성분"] for r in rows if r["사전 이름"] == "향료" or r["분류"] == "향료"],
+        "preservatives": [r["성분"] for r in rows if r["방부제"]],
+        "good": [r["성분"] for r in rows if r["나에게"] == "✅ 잘 맞음"],
+        "caution": [(r["성분"], r["이유"]) for r in rows if r["나에게"] == "⚠️ 주의"],
+        "guessed": sum(r["추정"] for r in rows),
+    }
+    return rows, summary
+
+
+def analyze_ingredients(text, profile):
+    """점수 계산과 표에 쓰는 간단한 형태 (주의 → 잘 맞음 → 보통 → 사전에 없음 순)."""
+    rows, _ = ingredient_report(text, profile)
     order = {"⚠️ 주의": 0, "✅ 잘 맞음": 1, "➖ 보통": 2, "❔ 사전에 없음": 3}
-    rows = list({r["성분"]: r for r in rows}.values())
-    rows.sort(key=lambda r: order[r["나에게"]])
-    return rows
+    out = [{"성분": r["사전 이름"], "역할": r["분류"], "나에게": r["나에게"], "이유": r["이유"] or "-"} for r in rows]
+    out = list({r["성분"]: r for r in out}.values())
+    out.sort(key=lambda r: order[r["나에게"]])
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -152,28 +196,30 @@ ASPECTS = {
            ["건조", "당김", "당겨", "보습이 부족", "보습력이 약"]),
     "진정/순함": (["진정", "순한", "자극 없", "민감"], ["진정", "순하", "순해", "자극 없", "자극이 없", "편안", "붉은기가 가라"],
               ["따가", "따끔", "자극", "붉어", "가려", "화끈"]),
-    "산뜻함": (["산뜻", "가벼운", "끈적임 없", "보송"], ["산뜻", "가볍", "보송", "끈적임 없", "끈적이지 않", "안 끈적"],
+    "산뜻함": (["산뜻", "가벼운", "끈적임 없", "보송"], ["산뜻", "가볍", "보송", "끈적임 없", "끈적이지 않", "안 끈적", "번들거림 잡", "유분 잡", "기름 잡"],
             ["끈적", "무거", "번들", "기름", "답답"]),
     "흡수": (["흡수"], ["흡수 빠", "흡수가 빠", "흡수가 잘", "스며"], ["흡수가 안", "흡수가 느", "겉돌", "밀려", "밀림"]),
-    "트러블": (["트러블", "여드름", "피지", "모공"], ["트러블 없", "트러블이 없", "트러블이 줄", "트러블 안", "좁쌀이 들어", "여드름이 줄", "진정됐", "진정되", "진정이 잘", "가라앉", "사라졌", "들어갔", "들어가", "덜남", "덜 나", "트러블 덜", "트러블이 덜", "줄어", "없어졌", "안 나", "안나"],
+    "트러블": (["트러블", "여드름", "피지", "모공"], ["트러블 없", "트러블이 없", "트러블이 줄", "트러블 안", "좁쌀이 들어", "여드름이 줄", "진정됐", "진정되", "진정이 잘", "가라앉", "사라졌", "들어갔", "들어가", "덜남", "덜 나", "트러블 덜", "트러블이 덜", "줄어", "없어졌", "없어지", "안 나", "안나",
+             "줄었", "줄고", "안올라", "안 올라", "잡혀", "잡아", "잡히", "잡혔", "좋아졌", "깨끗해"],
             ["트러블", "뾰루지", "올라왔", "좁쌀", "여드름이 났", "여드름 났"]),
     "미백/톤업": (["미백", "톤업", "브라이트닝", "잡티", "광채"], ["톤업", "밝아", "환해", "화사", "잡티가 옅"],
               ["변화 없", "변화가 없", "톤업이 안", "어두워"]),
-    "효과": (["효과", "개선", "인체 시험", "임상"], ["효과가 좋", "효과 좋", "효과가 눈에", "효과 있", "효과가 있", "효과를 봤", "효과 봤", "효과가 바로"],
-           ["효과 없", "효과가 없", "효과를 못", "효과는 잘", "모르겠", "그대로"]),
+    "효과": (["효과", "개선", "인체 시험", "임상"], ["효과가 좋", "효과 좋", "효과가 눈에", "효과 있", "효과가 있", "효과를 봤", "효과 봤", "효과가 바로", "효과보", "효과 보고", "효자템", "확실히", "확연히", "효과는 정말"],
+           ["효과 없", "효과가 없", "효과를 못", "효과는 잘", "모르겠", "그대로", "속은", "속았"]),
     "백탁": (["백탁"], ["백탁 없", "백탁이 없"], ["백탁", "회색", "하얗게 떠"]),
     "지속력": (["하루종일", "지속", "오래", "24시간"], ["하루종일 촉촉", "유지력 좋", "지속력 좋", "오래 유지"], ["금방", "오후에", "무너져", "무너지", "무너짐", "날아가"]),
     "향": (["향"], ["향 좋", "향이 좋", "은은", "향이 없어", "무향"], ["향이 강", "향이 너무", "냄새", "향 별로", "향이 별로"]),
     "가격": (["가성비", "합리적", "착한 가격"], ["가성비 좋", "가성비 최고", "가성비가 좋", "저렴", "싸게", "가격도 착"],
            ["비싸", "가격이 부담", "가성비 별로", "가격 대비"]),
 }
-POSITIVE = ["좋", "추천", "재구매", "만족", "최고", "인생템", "괜찮", "강추", "대박", "짱", "잘 맞", "또 살"]
+POSITIVE = ["좋", "추천", "재구매", "만족", "최고", "인생템", "괜찮", "강추", "대박", "짱", "잘 맞", "또 살",
+            "효자템", "정착", "매끈", "부드러워", "좋아졌", "줄었", "효과보", "효과 보", "확실히", "확연히", "뛰어"]
 NEGATIVE = ["별로", "비추", "실망", "안 맞", "안맞", "환불", "최악", "다시는", "아쉽", "아쉬", "안 좋", "좋지 않",
-            "좋진 않", "좋지는 않", "그닥", "글쎄", "버렸", "안 살"]
+            "좋진 않", "좋지는 않", "그닥", "글쎄", "버렸", "안 살", "속은", "속았", "효과 없", "효과가 없", "효과를 못"]
 SPONSORED = ["제공받", "협찬", "체험단", "서포터즈", "무상으로", "원고료"]
 # 리뷰 속 피부 타입 표현 → 앱의 피부 타입
-SKIN_WORDS = {"건성": ["건성", "건조한 피부", "악건성"], "지성": ["지성", "기름진 피부"],
-              "복합성": ["복합성", "수부지"], "중성": ["중성"], "민감성": ["민감성", "민감한 피부", "예민한 피부"]}
+SKIN_WORDS = {"건성": ["건성", "건조한 피부", "악건성"], "지성": ["지성", "기름진 피부", "기름 좔좔", "개기름", "피지가 많", "번들거리는 피부"],
+              "복합성": ["복합성", "수부지"], "중성": ["중성"], "민감성": ["민감성", "민감한 피부", "예민한 피부", "피부 예민", "피부가 예민", "예민한데", "예민해서"]}
 # 사이트에서 복사할 때 섞여 들어오는 잡음 줄
 NOISE = ["도움이 돼요", "도움돼요", "신고", "더보기", "답글", "판매자", "구매확정", "옵션:", "작성일"]
 CLAUSE_SPLIT = re.compile(r"은데|는데|지만|근데|그런데|하지만|그러나|다만|[.!?~,\n]")
@@ -192,6 +238,21 @@ def _polarity(text):
     return 0
 
 
+# 문제를 뜻하는 말 뒤에 이런 말이 오면 '문제가 해결됐다' = 좋은 평가로 본다
+# 예: "따가움 전혀 없어요", "번들거림 잡아줘요", "여드름이 많이 줄었어요"
+RESOLVED_AFTER = ["없", "않", "안 ", "안나", "안올라", "안 올라", "줄", "잡아", "잡혀", "잡히", "잡혔", "가라앉",
+                  "덜", "사라", "들어가", "들어갔", "진정", "개선", "해결", "좋아졌", "괜찮", "기 전", "예방", "관리용"]
+RESOLVED_BEFORE = ["전혀", "하나도", "없이", "안쓰면", "안 쓰면", "끊으면", "안 바르면", "안바르면"]
+# 예전 피부 상태를 설명하는 말 ("여드름의 노예였는데", "트러블이 심해서 샀는데") → 제품 평가가 아니므로 무시
+PAST_AFTER = ["였는데", "었는데", "였던", "었던", "였어서", "이라 고민", "라서 구매", "때문에 구매", "때문에 주문", "해서 샀", "해서 구매"]
+
+
+def _resolved(text, start, word):
+    after = text[start + len(word): start + len(word) + 14]
+    before = text[max(0, start - 12): start]
+    return any(r in after for r in RESOLVED_AFTER) or any(r in before for r in RESOLVED_BEFORE)
+
+
 def _aspect_hit(clause, pos, neg, topic=()):
     """문장 조각 하나에서 항목의 긍정(1)/부정(-1)/언급 없음(0)."""
     if any(p in clause for p in pos):
@@ -199,8 +260,21 @@ def _aspect_hit(clause, pos, neg, topic=()):
     stripped = clause
     for p in pos:
         stripped = stripped.replace(p, "")
-    if any(n in stripped for n in neg):
-        return -1
+    found = [(m.start(), n) for n in neg for m in re.finditer(re.escape(n), stripped)]
+    if found:
+        marks = []
+        for i, n in found:
+            after = stripped[i + len(n): i + len(n) + 14]
+            if _resolved(stripped, i, n):
+                marks.append(1)   # 문제가 없거나 해결됐다는 말
+            elif any(p in after for p in PAST_AFTER) or after.strip().endswith(("였", "었")):
+                marks.append(0)   # 예전 상태 설명
+            else:
+                marks.append(-1)
+        if -1 in marks:
+            return -1
+        if 1 in marks:
+            return 1
     if topic and any(t in clause for t in topic):
         return _polarity(clause)  # "보습은 좋아요"처럼 항목 이름 + 좋다/별로
     return 0
@@ -208,6 +282,21 @@ def _aspect_hit(clause, pos, neg, topic=()):
 
 def _skin_types(review):
     return [s for s, words in SKIN_WORDS.items() if any(w in review for w in words)]
+
+
+def _quote(review, clause, n=70):
+    """리뷰가 길면, 그 의견이 들어 있는 문장 부분만 잘라서 보여준다."""
+    if len(review) <= n:
+        return review
+    i = review.find(clause)
+    if i < 0:
+        return _short(review, n)
+    start = max(review.rfind(ch, 0, i) for ch in ".!?~\n")
+    start = 0 if start < 0 else start + 1
+    if i - start > n // 2:
+        start = max(0, i - 15)
+    piece = review[start:start + n].strip(" .~")
+    return ("…" if start > 0 else "") + piece + ("…" if start + n < len(review) else "")
 
 
 def _short(text, n=60):
@@ -240,11 +329,11 @@ def analyze_reviews(text, skin_type):
             for a, (topic, p_words, n_words) in ASPECTS.items():
                 hit = _aspect_hit(clause, p_words, n_words, topic)
                 if hit:
-                    hits[a] = hit  # 같은 리뷰에서 뒤에 나온 의견을 우선
-        for a, hit in hits.items():
+                    hits[a] = (hit, clause)  # 같은 리뷰에서 뒤에 나온 의견을 우선
+        for a, (hit, clause) in hits.items():
             key = "좋음" if hit == 1 else "아쉬움"
             result["aspects"][a][key] += 1
-            result["quotes"][a][key].append(_short(r))
+            result["quotes"][a][key].append(_quote(r, clause))
 
         # 리뷰 전체의 느낌: 조각별 긍정/부정 + 항목별 평가를 합쳐서 판단
         pols = [_polarity(c) for c in _clauses(r)] + list(hits.values())

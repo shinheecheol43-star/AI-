@@ -37,6 +37,12 @@ for key in ("ad", "ingredients", "reviews", "title"):
 st.session_state.setdefault("notes", [])
 st.session_state.setdefault("auto_run", False)
 st.session_state.setdefault("found", "")
+st.session_state.setdefault("review_total", 0)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def read_link_cached(url, limit):
+    return fetcher.read_link(url, limit)
 
 
 def load_link():
@@ -46,30 +52,36 @@ def load_link():
         st.session_state["auto_run"] = False
         return
     try:
-        result = fetcher.read_link(url)
+        with st.spinner(f"페이지와 리뷰를 읽는 중이에요… (리뷰 {st.session_state['review_limit']}개 기준 약 "
+                        f"{max(5, st.session_state['review_limit'] // 4)}초)"):
+            result = read_link_cached(url, st.session_state["review_limit"])
     except fetcher.FetchError as e:
         st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False, found="")
         return
     st.session_state.update(title=result["title"], ad=result["ad"], ingredients=result["ingredients"],
                             reviews=result["reviews"], notes=result["notes"], auto_run=True,
-                            found=_found_summary(result))
+                            found=_found_summary(result), review_total=result.get("review_total", 0))
 
 
 def _found_summary(result):
     n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
     n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
+    if result.get("review_total", 0) > n_rev:
+        where += f" · 전체 {result['review_total']:,}개 중 최근 리뷰"
     mark = lambda ok: "✅" if ok else "❌"
     return (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개 · "
             f"리뷰 {mark(n_rev)} {n_rev}개{where}")
 
 
 def load_sample(name):
-    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="")
+    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0)
 
 
-u1, u2 = st.columns([5, 1], vertical_alignment="bottom")
+u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
 u1.text_input("🔗 제품 페이지 링크", key="url", placeholder="광고에서 본 제품 페이지 주소를 붙여넣어 주세요 (https://...)")
+u3.selectbox("읽을 리뷰 수", [30, 100, 200], index=1, key="review_limit",
+             help="많이 읽을수록 정확하지만 오래 걸려요. (100개 약 25초) 같은 링크는 1시간 동안 바로 다시 볼 수 있어요.")
 u2.button("분석하기 ✨", on_click=load_link, type="primary", width="stretch")
 
 if st.session_state["found"]:
@@ -117,7 +129,9 @@ with m2:
 with m3:
     if reviews["count"]:
         sat = round(reviews["positive"] / reviews["count"] * 100)
-        ui.score_card("리뷰 만족도", sat, "%", f"협찬 제외 리뷰 {reviews['count']}개 기준")
+        total = st.session_state.get("review_total", 0)
+        base = f"전체 {total:,}개 중 최근 {reviews['count']}개" if total > reviews["count"] else f"리뷰 {reviews['count']}개"
+        ui.score_card("리뷰 만족도", sat, "%", f"{base} 기준 (협찬 제외)")
     else:
         ui.show('<div class="card score muted" style="padding:52px 20px">리뷰가 없어서<br>만족도를 계산하지 못했어요.</div>')
 ui.verdict(az.verdict_text(fit, trust), fit, trust)
@@ -153,11 +167,13 @@ with tab_review:
 with tab_ing:
     ui.section("🧪 내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
                f" · 피하는 성분: {', '.join(avoid) or '없음'}")
-    if ingredients:
-        ui.ingredient_chips(ingredients)
-        st.caption("성분 칩에 마우스를 올리면 판단 이유가 보여요.")
-        with st.expander("표로 보기"):
-            st.dataframe(pd.DataFrame(ingredients), hide_index=True, width="stretch")
+    ing_rows, ing_summary = az.ingredient_report(ing_text, profile)
+    if ing_rows:
+        ui.ingredient_summary(ing_summary)
+        ui.section("📋 성분 하나씩 보기", "적힌 순서대로예요. 번호가 작을수록 많이 들어 있어요.")
+        ui.ingredient_list(ing_rows)
+        if ing_summary["guessed"]:
+            st.caption(f"‘이름으로 추정’ 표시된 {ing_summary['guessed']}개는 사전에 없어서 성분 이름 모양으로 분류했어요.")
     else:
         ui.show('<div class="card muted">분석할 수 있는 성분이 없어요. 전성분을 붙여넣어 주세요.</div>')
 

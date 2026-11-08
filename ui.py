@@ -81,6 +81,16 @@ section[data-testid="stSidebar"] h2 { font-weight: 800; }
 .stButton > button { border-radius: 12px; font-weight: 700; }
 .stTextInput input { border-radius: 12px; }
 footer { visibility: hidden; }
+.ing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.ing-box { background: #FFF8F6; border: 1px solid #F3E1E5; border-radius: 14px; padding: 12px 14px; }
+.ing-box-title { font-weight: 800; font-size: .9rem; margin-bottom: 8px; }
+.ing-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px dashed #F0DDE2; }
+.ing-row:last-child { border-bottom: none; }
+.ing-num { width: 28px; height: 28px; border-radius: 50%; background: #FFE8EE; color: #E5537A; font-weight: 800;
+  font-size: .85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ing-main { flex: 1; min-width: 0; }
+.ing-desc { font-size: .88rem; color: #6B5E68; margin-top: 3px; }
+.mini { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: .72rem; font-weight: 700; margin-left: 4px; }
 @media (max-width: 640px) {
   .block-container { padding-top: 2.6rem; }
   .hero { padding: 24px 20px; border-radius: 20px; }
@@ -89,6 +99,8 @@ footer { visibility: hidden; }
   .ring-inner { width: 64px; height: 64px; }
   .ring-num { font-size: 1.4rem; }
   .bar-label { width: 70px; }
+  .ing-row { flex-wrap: wrap; }
+  .ing-row .badge { margin-left: 40px; }
 }
 </style>
 """
@@ -247,3 +259,51 @@ def topic_cards(items):
                        f'<div class="head" style="color:{color}">“{esc(t["word"])}”<span>{t["count"]}명이 언급 · {mood}</span></div>'
                        f'<div class="body">“{esc(t["quote"])}”</div>{others}</div>')
     show(html_parts)
+
+
+def ingredient_summary(sm):
+    def box(icon, title, body, color="#2D1B2E"):
+        return (f'<div class="ing-box"><div class="ing-box-title">{icon} {esc(title)}</div>'
+                f'<div style="color:{color}">{body}</div></div>')
+    none = '<span class="muted">없음</span>'
+    chips = lambda items, color, bg: "".join(
+        f'<span class="chip" style="background:{bg}; color:{color}">{esc(x)}</span>' for x in items) or none
+    boxes = [
+        box("🌟", "주요 성분 (가장 많이 든 5개)", chips(sm["main"], "#2D1B2E", "#F3EEF0")),
+        box("🏅", "식약처 기능성 원료", chips([f"{n} · {k}" for n, k in sm["functional"]], ROSE, "#FFE8EE")),
+        box("👍", "내 피부에 잘 맞는 성분", chips(sm["good"], GOOD, GOOD_BG)),
+        box("⚠️", "내 피부에 주의할 성분", chips([f"{n} ({r})" for n, r in sm["caution"]], BAD, BAD_BG)),
+        box("🌸", "향료 · 알레르기 유발 향 성분", chips(sm["fragrance"] + sm["allergens"], WARN, WARN_BG)),
+        box("🧴", "방부제", chips(sm["preservatives"], "#6B5E68", "#F3EEF0")),
+    ]
+    show(f'<div class="card"><div style="font-weight:800; font-size:1.05rem; margin-bottom:12px">'
+         f'전성분 {sm["total"]}개 한눈에 보기</div><div class="ing-grid">{"".join(boxes)}</div>'
+         f'<div class="muted" style="margin-top:10px">💡 전성분은 <b>많이 들어간 순서</b>로 적어요. '
+         f'(1% 이하로 들어간 성분은 순서가 자유로워요)</div></div>')
+
+
+def ingredient_list(rows):
+    styles = {"⚠️ 주의": (BAD, BAD_BG), "✅ 잘 맞음": (GOOD, GOOD_BG), "➖ 보통": ("#6B5E68", "#F3EEF0"),
+              "❔ 사전에 없음": ("#8A7A84", "#FFFFFF")}
+    items = ""
+    for r in rows:
+        color, bg = styles[r["나에게"]]
+        badges = ""
+        if r["주요"]:
+            badges += '<span class="mini" style="background:#2D1B2E; color:#fff">주요</span>'
+        if r["기능성"]:
+            badges += f'<span class="mini" style="background:#FFE8EE; color:{ROSE}">{esc(r["기능성"])}</span>'
+        if r["알레르기"]:
+            badges += f'<span class="mini" style="background:{WARN_BG}; color:{WARN}">알레르기 유발 향</span>'
+        if r["방부제"]:
+            badges += '<span class="mini" style="background:#F3EEF0; color:#6B5E68">방부제</span>'
+        if r["추정"]:
+            badges += '<span class="mini" style="background:#fff; color:#8A7A84; border:1px solid #E5D8DC">이름으로 추정</span>'
+        verdict = "판단 보류" if r["나에게"] == "❔ 사전에 없음" else r["나에게"]
+        reason = f' · {esc(r["이유"])}' if r["이유"] else ""
+        items += (f'<div class="ing-row"><div class="ing-num">{r["순서"]}</div><div class="ing-main">'
+                  f'<div><b>{esc(r["성분"])}</b> <span class="muted">{esc(r["분류"])}</span> {badges}</div>'
+                  f'<div class="ing-desc">{esc(r["설명"])}</div></div>'
+                  f'<span class="badge" style="background:{bg}; color:{color}; border:1px solid {color}33">'
+                  f'{esc(verdict)}{reason}</span></div>')
+    show(f'<div class="card">{items}</div>')

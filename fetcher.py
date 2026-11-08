@@ -246,28 +246,42 @@ def _board_article(item):
     return title
 
 
-def _cafe24_board(url, product_no, limit=30, pages=2):
-    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 이 상품의 후기를 읽는다."""
+def _board_list_page(args):
+    list_url, base = args
+    try:
+        soup = BeautifulSoup(fetch_html(list_url, timeout=8), "html.parser")
+    except FetchError:
+        return [], 0
+    items, top = [], 0
+    for tr in soup.find_all("tr"):
+        a = tr.find("a", href=re.compile(r"/article/[^/]+/4/\d+|board/product/read\.html"))
+        if not a:
+            continue
+        cells = [td.get_text(strip=True) for td in tr.find_all("td")]
+        if cells and cells[0].replace(",", "").isdigit():  # 첫 칸의 글 번호 = 이 상품 후기의 전체 개수 근처
+            top = max(top, int(cells[0].replace(",", "")))
+        items.append((re.sub(r"\s+", " ", a.get_text(" ", strip=True)), urljoin(base, a["href"])))
+    return items, top
+
+
+def _cafe24_board(url, product_no, limit=100):
+    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 이 상품의 최근 후기를 limit개까지 읽는다.
+    반환: (후기 목록, 게시판에 있는 이 상품 후기 전체 개수 추정)"""
     base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-    links = {}
-    for page_no in range(1, pages + 1):
-        list_url = f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}&page={page_no}"
-        try:
-            soup = BeautifulSoup(fetch_html(list_url, timeout=8), "html.parser")
-        except FetchError:
-            break
-        before = len(links)
-        for a in soup.find_all("a", href=True):
-            title = re.sub(r"\s+", " ", a.get_text(" ", strip=True))
-            if re.search(r"/article/[^/]+/4/\d+|board/product/read\.html", a["href"]) and title:
-                link = urljoin(base, a["href"])
-                links.setdefault(link.split("?")[0], (title, link))  # 같은 제목('만족')이어도 글마다 따로
-        if len(links) == before or len(links) >= limit:
-            break
-    items = list(links.values())[:limit]
+    pages = max(1, -(-limit // 15))
+    jobs = [(f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}&page={n}", base)
+            for n in range(1, pages + 1)]
     with ThreadPoolExecutor(max_workers=6) as pool:
+        listed = list(pool.map(_board_list_page, jobs))
+    links, total = {}, 0
+    for items, top in listed:
+        total = max(total, top)
+        for title, link in items:
+            links.setdefault(link.split("?")[0], (title, link))  # 같은 제목('만족')이어도 글마다 따로
+    items = list(links.values())[:limit]
+    with ThreadPoolExecutor(max_workers=8) as pool:
         texts = list(pool.map(_board_article, items))
-    return [t[:300] for t in texts if len(t) >= 2]
+    return [t[:300] for t in texts if len(t) >= 2], total
 
 
 def _crema(url, product_no):
@@ -277,46 +291,39 @@ def _crema(url, product_no):
     return _reviews_from_page(f"https://review4.cre.ma/{domain}/products/reviews?product_code={product_no}&iframe=1")
 
 
-def read_link(url):
+def read_link(url, review_limit=100):
     url = url.strip()
     result = parse(fetch_html(url))
-    reviews = result["reviews"].split("\n") if result["reviews"] else []
-    sources = []
-    if len(reviews) < 10:  # 상품 페이지에서 찾은 게 적으면 (버튼 글자일 수도 있으니) 다른 곳도 찾아본다
+    # 상품 페이지에서 찾은 글 중 평가가 없는 건 안내 문구일 가능성이 높아서 뺀다
+    reviews = [r for r in (result["reviews"].split("\n") if result["reviews"] else []) if _has_opinion(r)]
+    sources, total = [], 0
+    if len(reviews) < 10:  # 적으면 다른 곳도 찾아본다
         extra = []
         for src in result["frames"]:
-            got = _reviews_from_page(urljoin(url, src))
+            got = [r for r in _reviews_from_page(urljoin(url, src)) if _has_opinion(r)]
             if got:
                 extra += got
                 sources.append("리뷰 창")
         product_no = _product_no(url)
         if product_no and not extra:
-            got = _cafe24_board(url, product_no)
+            got, total = _cafe24_board(url, product_no, review_limit)
             if got:
                 extra += got
                 sources.append("상품 후기 게시판")
         if product_no and not extra:
-            got = _crema(url, product_no)
+            got = [r for r in _crema(url, product_no) if _has_opinion(r)]
             if got:
                 extra += got
                 sources.append("크리마 리뷰")
-        if extra:
-            reviews = list(dict.fromkeys(extra + reviews))[:50]
-            result["reviews"] = "\n".join(reviews)
-            result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")]
-        elif not reviews:
-            result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")] + [
-                "리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
-                "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요."]
-    # 좋다/별로 같은 평가도, 보습·향 같은 항목도 없는 글은 리뷰가 아니라 안내 문구일 가능성이 높아서 뺀다
-    kept = [r for r in (result["reviews"].split("\n") if result["reviews"] else []) if _has_opinion(r)]
-    if result["reviews"] and not kept:
-        result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")] + [
-            "리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
-            "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요."]
-        sources = []
-    result["reviews"] = "\n".join(kept)
+        reviews = extra + [r for r in reviews if r not in extra]
+    reviews = reviews[:review_limit]
+    result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")]
+    if not reviews:
+        result["notes"].append("리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
+                               "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요.")
+    result["reviews"] = "\n".join(reviews)
     result["sources"] = sources
+    result["review_total"] = total
     return result
 
 
