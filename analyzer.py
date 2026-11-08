@@ -84,9 +84,30 @@ INGREDIENTS = {
     "다이프로필렌글라이콜": {"alias": ["다이프로필렌글라이콜", "dipropylene glycol"], "role": "보습·용매", "good": [], "caution": []},
     "글리세레스-26": {"alias": ["글리세레스-26", "glycereth-26"], "role": "보습·유화", "good": [], "caution": []},
     "세테아릴알코올": {"alias": ["세테아릴알코올", "세틸알코올", "cetearyl", "cetyl alcohol"], "role": "지방 알코올(보습·유화)", "good": ["건성"], "caution": []},
-    "에칠헥실글리세린": {"alias": ["에칠헥실글리세린", "ethylhexylglycerin"], "role": "보습·보존 보조", "good": [], "caution": []},
+    "에칠헥실글리세린": {"alias": ["에칠헥실글리세린", "에틸헥실글리세린", "ethylhexylglycerin"], "role": "보습·보존 보조", "good": [], "caution": []},
     "카프릴릴글라이콜": {"alias": ["카프릴릴글라이콜", "caprylyl glycol"], "role": "보습·보존 보조", "good": [], "caution": []},
     "소듐시트레이트": {"alias": ["소듐시트레이트", "시트릭애씨드", "citric"], "role": "pH 조절", "good": [], "caution": []},
+    "자일리톨": {"alias": ["자일리톨", "자일리틸글루코사이드", "안하이드로자일리톨", "xylitol"], "role": "보습", "good": ["건조/보습"], "caution": []},
+    "엑토인": {"alias": ["엑토인", "ectoin"], "role": "보습·진정(피부 보호)", "good": ["건조/보습", "진정/홍조", "민감성"], "caution": []},
+    "EGF(올리고펩타이드-1)": {"alias": ["에스에이치-올리고펩타이드-1", "sh-oligopeptide-1"], "role": "피부 컨디션(EGF)", "good": ["주름/탄력"], "caution": []},
+    "NAD": {"alias": ["니코틴아마이드아데닌다이뉴클레오타이드"], "role": "항산화·활력", "good": ["주름/탄력"], "caution": []},
+    "레시틴": {"alias": ["레시틴", "하이드로제네이티드레시틴", "하이드로제네이티드포스파티딜콜린", "lecithin"], "role": "보습·유화", "good": ["건조/보습"], "caution": []},
+    "로즈힙오일": {"alias": ["로즈힙열매오일", "로즈힙오일", "rosehip"], "role": "영양 오일", "good": ["건성", "주름/탄력"], "caution": ["여드름/트러블"]},
+    "쿨링 성분": {"alias": ["메틸다이아이소프로필프로피온아마이드", "멘틸락테이트"], "role": "청량감(쿨링)", "good": [], "caution": ["민감성"]},
+    "비타민B12": {"alias": ["사이아노코발아민"], "role": "비타민(붉은색)", "good": [], "caution": []},
+    "엽산": {"alias": ["폴릭애씨드", "folic"], "role": "비타민", "good": [], "caution": []},
+    "글루타티온": {"alias": ["글루타티온", "glutathione"], "role": "항산화·톤 케어", "good": ["미백/잡티"], "caution": []},
+    "아세틸글루타민": {"alias": ["아세틸글루타민"], "role": "보습", "good": ["건조/보습"], "caution": []},
+    "주름 펩타이드": {"alias": ["팔미토일트라이펩타이드", "팔미토일펜타펩타이드", "아세틸헥사펩타이드", "아세틸옥타펩타이드", "카퍼트라이펩타이드",
+                         "올리고펩타이드", "헥사펩타이드", "트라이펩타이드", "다이펩타이드", "아세틸다이펩타이드"],
+               "role": "탄력·주름 케어(펩타이드)", "good": ["주름/탄력"], "caution": []},
+    "덱스트린": {"alias": ["덱스트린", "dextrin"], "role": "질감 조절", "good": [], "caution": []},
+    "하이드록시에틸셀룰로오스": {"alias": ["하이드록시에틸셀룰로오스", "하이드록시프로필메틸셀룰로오스"], "role": "점도 조절", "good": [], "caution": []},
+    "유화제": {"alias": ["솔비탄라우레이트", "폴리글리세릴-10라우레이트", "C12-14알케스-12", "폴리소르베이트", "세테아레스", "PEG"],
+            "role": "유화제(물·기름 섞기)", "good": [], "caution": []},
+    "베리 추출물": {"alias": ["월귤추출물", "빌베리열매추출물", "크랜베리추출물", "로우스위트블루베리추출물", "아사이팜열매추출물",
+                         "라즈베리추출물", "서양산딸기추출물", "엘더열매추출물"], "role": "항산화(베리 추출물)", "good": [], "caution": []},
+    "PDRN": {"alias": ["소듐디엔에이", "디엔에이", "PDRN"], "role": "피부 컨디션(PDRN)", "good": ["주름/탄력"], "caution": []},
     "에칠헥실메톡시신나메이트": {"alias": ["에칠헥실메톡시신나메이트"], "role": "유기자차 성분",
                       "good": [], "caution": ["민감성"]},
 }
@@ -96,15 +117,35 @@ CONCERNS = ["여드름/트러블", "건조/보습", "미백/잡티", "주름/탄
 AVOID_OPTIONS = ["향료", "알코올", "파라벤", "에센셜오일"]
 
 
-def _tokens(text):
-    """전성분 글을 성분 이름 목록으로 (적힌 순서 그대로). '1,2-헥산다이올'처럼 이름 속 쉼표는 지킨다."""
+AMOUNT = re.compile(r"\(\s*([\d.]+)\s*(ppm|ppb|%)\s*\)", re.I)
+
+
+def _tokens_with_amount(text):
+    """전성분 글 → [(성분 이름, 표시된 함량 또는 '')] (적힌 순서 그대로).
+    '1,2-헥산다이올'처럼 이름 속 쉼표, '바실러스/소이빈발효추출물'처럼 이름 속 '/'는 지킨다."""
     text = re.sub(r"(\d),(\d)", r"\1§\2", text)
-    out = []
-    for t in re.split(r"[,\n/·]", text):
-        t = re.sub(r"\(.*?\)|[\[\]*]", "", t.replace("§", ",")).strip(" .")
-        if 2 <= len(t) <= 40:
-            out.append(t)
-    return list(dict.fromkeys(out))
+    out, seen = [], set()
+    for t in re.split(r"[,\n·]", text):
+        t = t.replace("§", ",")
+        m = AMOUNT.search(t)
+        amount = f"{m.group(1)}{m.group(2).lower()}" if m else ""
+        name = re.sub(r"\(.*?\)|[\[\]*]", "", t).strip(" .")
+        if 2 <= len(name) <= 40 and name not in seen:
+            seen.add(name)
+            out.append((name, amount))
+    return out
+
+
+def _tokens(text):
+    return [n for n, _ in _tokens_with_amount(text)]
+
+
+def _amount_to_percent(amount):
+    m = re.match(r"([\d.]+)(ppm|ppb|%)", amount)
+    if not m:
+        return None
+    v = float(m.group(1))
+    return {"%": v, "ppm": v / 10000, "ppb": v / 10000000}[m.group(2)]
 
 
 def _match(token):
@@ -117,11 +158,11 @@ def _match(token):
 
 def ingredient_report(text, profile):
     """전성분을 적힌 순서대로 하나씩 설명하고, 요약 정보를 만든다."""
-    from ingredients_info import (ALLERGENS, COMBOS, DESC, FUNCTIONAL, FUNCTIONAL_DOSE, GROUP_OF, GUESS_GROUP,
+    from ingredients_info import (ALLERGENS, COMBOS, DESC, FUNCTIONAL, FUNCTIONAL_DOSE, GROUP_OF, GUESS_FIT, GUESS_GROUP,
                                   ONE_PERCENT_MARKERS, PRESERVATIVES, guess)
     mine = {profile["skin_type"], *profile["concerns"], *profile["avoid"]}
     rows = []
-    for idx, token in enumerate(_tokens(text), start=1):
+    for idx, (token, label_amount) in enumerate(_tokens_with_amount(text), start=1):
         name, info = _match(token)
         if info:
             good = [g for g in info["good"] if g in mine]
@@ -131,9 +172,15 @@ def ingredient_report(text, profile):
             reason = ", ".join(bad or good)
         else:
             category, desc = guess(token)
-            verdict, reason, guessed = "❔ 사전에 없음", "", True
+            guessed = True
             if not category:
                 category, desc = "기타", "아직 정보가 없는 성분이에요."
+                verdict, reason = "❔ 사전에 없음", ""
+            else:  # 이름으로 분류한 성분도 피부 타입 기준으로 판단
+                good = [g for g in GUESS_FIT.get(category, ([], []))[0] if g in mine]
+                bad = [c for c in GUESS_FIT.get(category, ([], []))[1] if c in mine]
+                verdict = "⚠️ 주의" if bad else "✅ 잘 맞음" if good else "➖ 보통"
+                reason = ", ".join(bad or good)
         rows.append({
             "순서": idx, "성분": token, "사전 이름": name or token, "분류": category, "설명": desc,
             "나에게": verdict, "이유": reason, "추정": guessed,
@@ -142,12 +189,19 @@ def ingredient_report(text, profile):
             "방부제": any(token.startswith(p) for p in PRESERVATIVES) or category == "방부제",
             "주요": idx <= 5,
             "그룹": GROUP_OF.get(name or "", GUESS_GROUP.get(category, "❔ 기타")),
+            "표시 함량": label_amount,
         })
 
     # 함량 추정: 전성분은 많이 든 순서. 최대 1%로 정해진 성분(페녹시에탄올) 뒤는 모두 1% 이하
-    marker = next((r for r in rows if r["사전 이름"] in ONE_PERCENT_MARKERS), None)
+    marker = next((r for r in rows if r["사전 이름"] in ONE_PERCENT_MARKERS
+                   or (r["표시 함량"] and (_amount_to_percent(r["표시 함량"]) or 99) <= 1)), None)
     n = len(rows)
     for r in rows:
+        pct = _amount_to_percent(r["표시 함량"]) if r["표시 함량"] else None
+        if pct is not None:
+            r["함량"] = f"{r['표시 함량']} (= {pct:g}%)"
+            r["표시 %"] = pct
+            continue
         if marker and r["순서"] > marker["순서"]:
             r["함량"] = "1% 이하"
         elif marker and r["순서"] == marker["순서"]:
@@ -157,7 +211,7 @@ def ingredient_report(text, profile):
         elif r["순서"] <= max(5, n // 3):
             r["함량"] = "많은 편"
         elif marker:
-            r["함량"] = "1% 이상"
+            r["함량"] = "중간"  # 1% 줄 앞이라도 1% 이하일 수 있어서 '1% 이상'이라고 단정하지 않음
         else:
             r["함량"] = "앞쪽보다 적음"
         # 기능성 원료가 충분히 들어 있을 만한 위치인지
@@ -178,7 +232,10 @@ def ingredient_report(text, profile):
     for r in rows:
         groups.setdefault(r["그룹"], []).append(r["성분"])
     summary = {
-        "marker": (marker["성분"], marker["순서"], ONE_PERCENT_MARKERS[marker["사전 이름"]]) if marker else None,
+        "marker": (marker["성분"], marker["순서"],
+                   ONE_PERCENT_MARKERS.get(marker["사전 이름"])
+                   or f"전성분에 {marker['표시 함량']}로 적혀 있는 성분(1% 이하이고, 1%가 넘는 성분은 반드시 그 앞에 적어야 해서)")
+                  if marker else None,
         "groups": groups, "combos": combos,
         "total": len(rows),
         "main": [r["성분"] for r in rows if r["주요"]],
@@ -219,7 +276,7 @@ def _find(words, text):
 
 def analyze_ad(text):
     return {
-        "exaggeration": _find(EXAGGERATION, text),
+        "exaggeration": _find(EXAGGERATION, re.sub(r"모든\s*피부용", "", text)),  # '모든 피부용'은 표시 사항
         "medical": _find(MEDICAL, text),
         "disclosed": bool(_find(AD_DISCLOSURE, text)),
     }
@@ -749,4 +806,106 @@ def claim_support(ad_text, rows):
         found = [(by_name[n]["성분"], by_name[n]["순서"], by_name[n]["함량"]) for n in names if n in by_name]
         found.sort(key=lambda x: x[1])
         out.append({"keyword": kw, "found": found, "ok": bool(found)})
+    return out
+
+
+CONCERN_SUPPORT = {"여드름/트러블": "트러블", "건조/보습": "보습", "미백/잡티": "미백", "주름/탄력": "탄력",
+                   "모공": "모공", "진정/홍조": "진정"}
+
+
+def _cap(items, cap):
+    out, total = [], 0
+    for label, d in items:
+        if (d < 0 and total <= cap) or (d > 0 and total >= cap):
+            out.append((label + " (최대치 도달)", 0))
+            continue
+        d = max(d, cap - total) if d < 0 else min(d, cap - total)
+        total += d
+        out.append((label, d))
+    return out
+
+
+def skin_match(rows, summary, profile):
+    """성분이 내 피부 타입·고민·피하는 성분과 얼마나 맞는지 0~100점. 반환: (점수, [(설명, 점수 변화)])"""
+    from ingredients_info import SUPPORT
+    if not rows:
+        return None, []
+    items = [("기본 점수", 50)]
+    by_name = {}
+    for r in rows:
+        by_name.setdefault(r["사전 이름"], r)
+    concern_items = []
+    for c in profile["concerns"]:
+        names = SUPPORT.get(CONCERN_SUPPORT.get(c, ""), [])
+        found = [by_name[n] for n in names if n in by_name]
+        if not found:
+            concern_items.append((f"고민 ‘{c}’에 도움 되는 대표 성분이 없음", -8))
+            continue
+        best = min(found, key=lambda r: r["순서"])
+        tiny = all((r.get("표시 %") is not None and r["표시 %"] < 0.01) or r["함량"] in ("1% 이하",) for r in found)
+        label = ", ".join(r["성분"] for r in found[:3])
+        if tiny:
+            concern_items.append((f"고민 ‘{c}’ 성분({label})이 있지만 아주 적은 양", 5))
+        elif best["순서"] <= max(5, len(rows) // 3):
+            concern_items.append((f"고민 ‘{c}’ 성분({label})이 앞쪽(많이)에 있음", 15))
+        else:
+            concern_items.append((f"고민 ‘{c}’ 성분({label})이 들어 있음", 10))
+    items += _cap(concern_items, 30 if concern_items else 0) if concern_items else []
+
+    good = [r for r in rows if r["나에게"] == "✅ 잘 맞음"]
+    if good:
+        items += _cap([(f"내 피부에 잘 맞는 성분 {len(good)}개 ({', '.join(r['성분'] for r in good[:4])}{' 등' if len(good) > 4 else ''})",
+                        min(20, 3 * len(good)))], 20)
+    avoid = set(profile["avoid"])
+    caution = []
+    for r in rows:
+        if r["나에게"] != "⚠️ 주의":
+            continue
+        hit_avoid = avoid & set(r["이유"].split(", "))
+        caution.append((f"{'피하고 싶은 성분' if hit_avoid else '주의 성분'} ‘{r['성분']}’ ({r['이유']})", -15 if hit_avoid else -8))
+    items += _cap(caution, -40)
+    items += _cap([(f"자극될 수 있는 조합: {m[:30]}…", -5) for m in summary.get("combos", [])], -10)
+    score = max(0, min(100, sum(d for _, d in items)))
+    return score, items
+
+
+def fit_with_reviews(match, reviews):
+    """성분 매칭 점수에, 나와 같은 피부 타입 리뷰 반응을 (충분할 때만) 더한다."""
+    fit = 60 if match is None else match
+    row = reviews["by_skin"].get(reviews.get("skin_type", ""))
+    if row and skin_verdict(row, reviews["count"]):
+        n = row["긍정"] + row["부정"] + row["혼합"]
+        fit += round(((row["긍정"] + row["혼합"] * 0.5) / n - 0.5) * 30)
+    return max(0, min(100, fit))
+
+
+def title_check(title, rows):
+    """제품 이름에 내세운 성분이 전성분에 얼마나 들어 있는지."""
+    from ingredients_info import TITLE_KEYS
+    if not title or not rows:
+        return []
+    by_name = {}
+    for r in rows:
+        by_name.setdefault(r["사전 이름"], r)
+    out, used = [], set()
+    for key, names in TITLE_KEYS.items():
+        if key.lower() not in title.lower() or tuple(names) in used:
+            continue
+        used.add(tuple(names))
+        found = [by_name[n] for n in names if n in by_name]
+        if not found:
+            out.append({"key": key, "found": None, "level": "missing",
+                        "text": "제품 이름에는 있지만 전성분에서 찾지 못했어요."})
+            continue
+        r = min(found, key=lambda x: x["순서"])
+        pct = r.get("표시 %")
+        if pct is not None and pct < 0.01:
+            level, text = "tiny", f"{r['순서']}번째 · 표시된 함량 {r['표시 함량']} = {pct:g}%로 아주 적은 양이에요."
+        elif r["함량"] in ("1% 이하", "최대 1%"):
+            level, text = "low", f"{r['순서']}번째 · 1% 이하로 들어 있어요."
+        elif r["순서"] <= max(5, len(rows) // 3):
+            level, text = "high", f"{r['순서']}번째 · 앞쪽이라 비교적 많이 들어 있어요."
+        else:
+            level, text = "mid", f"{r['순서']}번째 · 중간쯤에 있어요."
+        out.append({"key": key, "found": r["성분"], "level": level, "text": text})
     return out

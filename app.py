@@ -40,6 +40,7 @@ st.session_state.setdefault("auto_run", False)
 st.session_state.setdefault("found", "")
 st.session_state.setdefault("review_total", 0)
 st.session_state.setdefault("review_dates", [])
+st.session_state.setdefault("site_summary", [])
 st.session_state.setdefault("sampled_evenly", False)
 
 
@@ -77,7 +78,8 @@ def load_link():
     st.session_state.update(title=result["title"], ad=result["ad"], ingredients=result["ingredients"],
                             reviews=result["reviews"], notes=result["notes"], auto_run=True,
                             found=_found_summary(result), review_total=result.get("review_total", 0),
-                            review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False))
+                            review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False),
+                            site_summary=result.get("site_summary", []))
 
 
 def _found_summary(result):
@@ -94,7 +96,7 @@ def _found_summary(result):
 
 def load_sample(name):
     st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0,
-                            review_dates=[], sampled_evenly=False)
+                            review_dates=[], sampled_evenly=False, site_summary=[])
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
@@ -136,9 +138,10 @@ ingredients = az.analyze_ingredients(ing_text, profile)
 ad = az.analyze_ad(ad_text)
 reviews = az.analyze_reviews(rev_text, skin_type)
 claims = az.compare_claims(ad_text, reviews)
-fit, _ = az.scores(ingredients, ad, reviews, claims)
 ing_rows, ing_summary = az.ingredient_report(ing_text, profile)
-rep = ad_report.build(ad_text, reviews, rev_text, ing_rows)
+match, match_items = az.skin_match(ing_rows, ing_summary, profile)
+fit = az.fit_with_reviews(match, reviews)
+rep = ad_report.build(ad_text, reviews, rev_text, ing_rows, st.session_state["title"])
 trust = rep["trust"]
 
 st.divider()
@@ -146,7 +149,7 @@ ui.product_title(st.session_state["title"])
 
 m1, m2, m3 = st.columns(3)
 with m1:
-    ui.score_card("나와의 적합도", fit, "점", "성분 + 같은 피부 리뷰 기준")
+    ui.score_card("나와의 적합도", fit, "점", "성분 매칭 점수 + 같은 피부 리뷰")
 with m2:
     ui.score_card("광고 신뢰도", trust, "점", "표현 · 근거 · 리뷰 · 성분 · 광고 후기 5가지 기준")
 with m3:
@@ -163,6 +166,9 @@ ui.verdict(az.verdict_text(fit, trust), fit, trust)
 tab_review, tab_ing, tab_ad = st.tabs(["📝 리뷰 요약", "🧪 성분 분석", "📢 광고 vs 실제"])
 
 with tab_review:
+    if st.session_state.get("site_summary"):
+        ui.section("🏪 쇼핑몰이 보여주는 리뷰 요약 (참고)")
+        ui.site_summary(st.session_state["site_summary"])
     if reviews["count"] or reviews["sponsored"]:
         summary = az.summarize_reviews(reviews, skin_type)
         ui.section("🗣️ 총평")
@@ -200,6 +206,12 @@ with tab_ing:
     ui.section("🧪 내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
                f" · 피하는 성분: {', '.join(avoid) or '없음'}")
     if ing_rows:
+        ui.section("🎯 내 피부와 성분 매칭 점수", "성분이 내 피부 타입·고민·피하고 싶은 성분과 얼마나 맞는지예요.")
+        ui.match_breakdown(match, match_items, skin_type, concerns, avoid)
+        title_items = az.title_check(st.session_state["title"], ing_rows)
+        if title_items:
+            ui.section("🏷️ 제품 이름 속 성분, 얼마나 들어 있을까?", "제품 이름에 내세운 성분이 전성분 어디에 있는지 확인했어요.")
+            ui.title_check(title_items, st.session_state["title"])
         ui.ingredient_summary(ing_summary)
         ui.section("🧩 성분 구성", "어떤 역할의 성분이 몇 개 들어 있는지예요.")
         ui.ingredient_groups(ing_summary["groups"], ing_summary["total"])

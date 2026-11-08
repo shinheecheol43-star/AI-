@@ -153,6 +153,23 @@ def _find_reviews(soup):
     return reviews
 
 
+AD_JUNK = re.compile(r"\{#|\{\$|SHIPPING|BOX|증정|할인|소득공제|\(\+[\d,]+원\)|쿠폰|적립|배송비|무료배송|^[\d,]+원|"
+                     r"장바구니|구매하기|옵션|수량|품절|재입고|로그인|회원가입|적당량|펴 바르|사용 방법|사용법|덜어", re.I)
+# 쇼핑몰이 직접 만든 리뷰 요약 문장 (리뷰가 아님)
+SITE_SUMMARY = re.compile(r"^(고객|구매자|사용자)들은.*(평가|받았|좋아합|만족했)|평가를 받았습니다")
+REVIEW_SERVICES = {"크리마(CREMA)": r"cre\.ma|crema", "브이리뷰": r"vreview", "알파리뷰": r"alph\.kr|alpha-?review",
+                   "스냅리뷰": r"snapreview", "리뷰톡": r"reviewtalk"}
+
+
+MENU_ITEM = re.compile(r"^\S{2,12}(패드|크림|토너|세럼|앰플|마스크|클렌저|폼|선크림|미스트|로션|에센스|팩|오일)$")
+
+
+def clean_ad(text):
+    lines = [l.strip() for l in text.split("\n")]
+    # 'AD_JUNK': 가격·옵션·배송 글자 / 'MENU_ITEM': '제로모공패드'처럼 메뉴에 있는 다른 상품 이름
+    return "\n".join(l for l in lines if len(l) >= 4 and not AD_JUNK.search(l) and not MENU_ITEM.match(l))
+
+
 def _find_ad_lines(lines, limit=15):
     picked = []
     for line in lines:
@@ -174,6 +191,7 @@ def clean_title(title):
 
 
 def parse(html):
+    services = [name for name, pat in REVIEW_SERVICES.items() if re.search(pat, html, re.I)]
     soup = BeautifulSoup(html, "html.parser")
     ld = _json_ld(soup)
     frames = [f.get("src") for f in soup.find_all("iframe")
@@ -205,7 +223,7 @@ def parse(html):
         notes.append("광고 문구를 찾지 못했어요.")
 
     return {"title": clean_title(title), "ad": ad_text, "ingredients": ingredients,
-            "reviews": "\n".join(reviews), "notes": notes, "frames": frames}
+            "reviews": "\n".join(reviews), "notes": notes, "frames": frames, "services": services}
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +340,10 @@ def read_link(url, review_limit=400, progress=None):
     url = url.strip()
     result = parse(fetch_html(url))
     # 상품 페이지에서 찾은 글 중 평가가 없는 건 안내 문구일 가능성이 높아서 뺀다
-    reviews = [r for r in (result["reviews"].split("\n") if result["reviews"] else []) if _has_opinion(r)]
+    result["ad"] = clean_ad(result["ad"])
+    page_reviews = result["reviews"].split("\n") if result["reviews"] else []
+    result["site_summary"] = [r for r in page_reviews if SITE_SUMMARY.search(r)]
+    reviews = [r for r in page_reviews if _has_opinion(r) and r not in result["site_summary"]]
     sources, total, dated = [], 0, []
     if len(reviews) < 10:  # 적으면 다른 곳도 찾아본다
         extra = []
@@ -346,7 +367,12 @@ def read_link(url, review_limit=400, progress=None):
         reviews = extra + [r for r in reviews if r not in extra]
     reviews = reviews[:review_limit]
     result["notes"] = [n for n in result["notes"] if not n.startswith("리뷰를 찾지")]
-    if not reviews:
+    service = next(iter(result.get("services") or []), "")
+    if len(reviews) < 10 and service:
+        result["notes"].append(f"이 쇼핑몰은 리뷰를 외부 리뷰 서비스({service})에 모아 두어서 링크로는 "
+                               f"{'리뷰를 읽을 수 없어요' if not reviews else f'리뷰를 {len(reviews)}개밖에 읽지 못했어요'}. "
+                               "쇼핑몰 리뷰 화면에서 리뷰를 복사해 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣으면 제대로 분석할 수 있어요.")
+    elif not reviews:
         result["notes"].append("리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
                                "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요.")
     result["reviews"] = "\n".join(reviews)

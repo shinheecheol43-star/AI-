@@ -289,7 +289,7 @@ def ingredient_list(rows):
     styles = {"⚠️ 주의": (BAD, BAD_BG), "✅ 잘 맞음": (GOOD, GOOD_BG), "➖ 보통": ("#6B5E68", "#F3EEF0"),
               "❔ 사전에 없음": ("#8A7A84", "#FFFFFF")}
     items, divided = "", False
-    amount_style = {"가장 많음": ("#2D1B2E", "#F3EEF0"), "많은 편": ("#2D1B2E", "#F7F1F3"), "1% 이상": ("#6B5E68", "#F7F1F3"),
+    amount_style = {"가장 많음": ("#2D1B2E", "#F3EEF0"), "많은 편": ("#2D1B2E", "#F7F1F3"), "중간": ("#6B5E68", "#F7F1F3"),
                     "앞쪽보다 적음": ("#8A7A84", "#FFFFFF"), "최대 1%": (WARN, WARN_BG), "1% 이하": ("#8A7A84", "#FFFFFF")}
     for r in rows:
         if r.get("함량") == "1% 이하" and not divided:
@@ -485,3 +485,46 @@ def claim_support(items):
                      f'전성분에서 보이지 않아요.</div></div>'
                      f'<span class="badge" style="background:{BAD_BG}; color:{BAD}">❌ 성분 근거 없음</span></div>')
     show(f'<div class="card">{rows}</div>')
+
+
+def match_breakdown(score, items, skin_type, concerns, avoid):
+    color = _tone(score)
+    level = ("내 피부에 잘 맞는 성분 구성이에요" if score >= 75 else
+             "보통이에요. 주의 성분이 나에게 중요한지 확인해 보세요" if score >= 50 else
+             "내 피부와 잘 맞지 않는 성분이 많아요")
+    rows = ""
+    for label, d in items:
+        if label == "기본 점수":
+            rows += f'<div class="claim"><div>{esc(label)}</div><b>{d}</b></div>'
+            continue
+        c = GOOD if d > 0 else BAD if d < 0 else "#8A7A84"
+        rows += f'<div class="claim"><div class="ing-desc">{esc(label)}</div><b style="color:{c}">{"+" if d > 0 else ""}{d}</b></div>'
+    who = f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'} · 피하는 성분: {', '.join(avoid) or '없음'}"
+    show(f'<div class="card"><div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap">'
+         f'<span style="font-size:2rem; font-weight:800; color:{color}">{score}점</span>'
+         f'<span style="font-weight:700; color:{color}">{esc(level)}</span></div>'
+         f'<div class="muted" style="margin-bottom:6px">{esc(who)} 기준이에요. 위쪽 ‘내 피부 정보’를 바꾸면 점수도 바뀌어요.</div>{rows}</div>')
+
+
+def title_check(items, title):
+    if not items:
+        return
+    styles = {"high": (GOOD, GOOD_BG, "✅ 많이 들어 있음"), "mid": ("#6B5E68", "#F3EEF0", "➖ 중간"),
+              "low": (WARN, WARN_BG, "⚠️ 1% 이하"), "tiny": (BAD, BAD_BG, "⚠️ 아주 적은 양"),
+              "missing": (BAD, BAD_BG, "❌ 전성분에 없음")}
+    rows = ""
+    for it in items:
+        color, bg, badge = styles[it["level"]]
+        found = f' <span class="muted">→ {esc(it["found"])}</span>' if it["found"] else ""
+        rows += (f'<div class="claim"><div><b>‘{esc(it["key"])}’</b>{found}<div class="ing-desc">{esc(it["text"])}</div></div>'
+                 f'<span class="badge" style="background:{bg}; color:{color}">{badge}</span></div>')
+    tip = ""
+    if any(it["level"] in ("tiny", "low") for it in items):
+        tip = ('<div class="muted" style="margin-top:8px">💡 이름에 내세운 성분이 아주 조금만 들어 있어도 이름에 쓸 수 있어요. '
+               '이름보다 앞쪽에 있는 성분이 실제 사용감을 좌우해요.</div>')
+    show(f'<div class="card">{rows}{tip}</div>')
+
+
+def site_summary(lines):
+    rows = "".join(f'<div class="mini-quote" style="border-color:#C9B8C0">🏪 {esc(l)}</div>' for l in lines)
+    show(f'<div class="card"><div class="muted">쇼핑몰이 직접 만든 리뷰 요약이에요. 판매자가 만든 글이라 분석 점수에는 넣지 않았어요.</div>{rows}</div>')

@@ -61,7 +61,7 @@ def _where_all(words, sentences):
     return real or hits
 
 
-def build(ad_text, reviews, review_text, ing_rows=None):
+def build(ad_text, reviews, review_text, ing_rows=None, title=""):
     sentences = _sentences(ad_text)
     ad = az.analyze_ad(ad_text)
     claims = az.compare_claims(ad_text, reviews)
@@ -152,8 +152,10 @@ def build(ad_text, reviews, review_text, ing_rows=None):
             rv.append((f"‘{card['aspect']}’ 주장을 언급한 리뷰가 {n}개뿐이라 근거 부족", -4))
         else:
             rv.append((f"‘{card['aspect']}’ 주장은 리뷰로 확인할 수 없음", -6))
+    if reviews["count"] < 10:  # 리뷰를 거의 못 읽었으면 '확인 불가'로 브랜드를 깎지 않음 (앱의 한계라서)
+        rv = [(f"리뷰를 {reviews['count']}개밖에 읽지 못해 이 기준은 판단 보류 (리뷰를 붙여넣으면 계산돼요)", 0)]
     sat, _ = az.satisfaction(reviews)
-    if sat is not None and sat < 60:
+    if sat is not None and sat < 60 and reviews["count"] >= 10:
         rv.append((f"전체 리뷰 만족도가 {sat}%로 낮음", -10))
     add("③ 실제 리뷰와 비교", rv, -35)
 
@@ -165,6 +167,11 @@ def build(ad_text, reviews, review_text, ing_rows=None):
             ing.append((f"‘{sp['keyword']}’ 효과 성분이 1% 이하로만 들어 있음", -3))
         elif len(sp["found"]) == 1:
             ing.append((f"‘{sp['keyword']}’ 효과의 근거 성분이 {sp['found'][0][0]} 1개뿐", -2))
+    for t in az.title_check(title, ing_rows or []):
+        if t["level"] == "missing":
+            ing.append((f"제품 이름의 ‘{t['key']}’ 성분을 전성분에서 찾을 수 없음", -6))
+        elif t["level"] == "tiny":
+            ing.append((f"제품 이름에 내세운 ‘{t['key']}’ 성분이 극소량 ({t['text'].split('· ')[-1].split('로')[0]})", -4))
     add("④ 성분 근거", ing, -15)
 
     disappointed = sum(1 for r in az.split_reviews(review_text)
