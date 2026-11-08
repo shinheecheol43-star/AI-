@@ -86,7 +86,7 @@ def _found_summary(result):
     n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
     n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
-    if result.get("review_total", 0) > n_rev:
+    if result.get("review_total", 0) > n_rev and n_rev >= 10:
         how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
         where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
     mark = lambda ok: "✅" if ok else "❌"
@@ -161,7 +161,10 @@ with m3:
         ui.score_card("리뷰 만족도", sat, "%", f"{base} · 평가 남긴 {opinion_n}개 기준 · 오차 ±{moe}%")
     else:
         ui.show('<div class="card score muted" style="padding:52px 20px">리뷰가 없어서<br>만족도를 계산하지 못했어요.</div>')
-ui.verdict(az.verdict_text(fit, trust), fit, trust)
+verdict = az.verdict_text(fit, trust)
+if az.satisfaction(reviews)[1] < 5:
+    verdict += " 단, 리뷰를 거의 읽지 못해 실제 사용 후기는 반영되지 않았어요. 리뷰를 붙여넣어 확인해 보세요."
+ui.verdict(verdict, fit, trust)
 
 tab_review, tab_ing, tab_ad = st.tabs(["📝 리뷰 요약", "🧪 성분 분석", "📢 광고 vs 실제"])
 

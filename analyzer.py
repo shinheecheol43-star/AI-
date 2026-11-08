@@ -737,14 +737,17 @@ def overall_comment(reviews, claims, skin_type, fit):
     sat, opinion_n = satisfaction(reviews)
     out = []
 
-    # 1) 전체 분위기
-    if pos >= (neg + mixed) * 2:
+    # 1) 전체 분위기 (평가가 담긴 리뷰가 너무 적으면 단정하지 않음)
+    if opinion_n < 5:
+        out.append(f"평가가 담긴 리뷰가 **{opinion_n}개뿐이라 전체 평가를 판단하기 어려워요.** "
+                   "쇼핑몰 리뷰를 복사해 붙여넣으면 더 정확하게 분석할 수 있어요.")
+    elif pos >= (neg + mixed) * 2:
         out.append("전체적으로 **만족한다는 평이 많은 제품**이에요.")
     elif neg > pos + mixed:
         out.append("전체적으로 **아쉽다는 평이 더 많은 제품**이에요.")
     else:
         out.append("**호불호가 갈리는 제품**이에요.")
-    if sat is not None:
+    if sat is not None and opinion_n >= 5:
         out.append(f"평가를 남긴 리뷰 {opinion_n}개 중 **만족 비율은 {sat}%**예요.")
     if reviews.get("pending"):
         out.append(f"(아직 써본 지 얼마 안 돼 판단을 미룬 리뷰 {reviews['pending']}개는 따로 봤어요.)")
