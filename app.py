@@ -39,11 +39,13 @@ st.session_state.setdefault("notes", [])
 st.session_state.setdefault("auto_run", False)
 st.session_state.setdefault("found", "")
 st.session_state.setdefault("review_total", 0)
+st.session_state.setdefault("review_dates", [])
+st.session_state.setdefault("sampled_evenly", False)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def read_link_cached(url, limit):
-    return fetcher.read_link(url, limit)
+def read_link_cached(url, limit, _progress=None):
+    return fetcher.read_link(url, limit, _progress)
 
 
 def load_link():
@@ -53,15 +55,19 @@ def load_link():
         st.session_state["auto_run"] = False
         return
     try:
-        with st.spinner(f"페이지와 리뷰를 읽는 중이에요… (리뷰 {st.session_state['review_limit']}개 기준 약 "
-                        f"{max(5, st.session_state['review_limit'] // 4)}초)"):
-            result = read_link_cached(url, st.session_state["review_limit"])
+        limit = st.session_state["review_limit"]
+        bar = st.progress(0, text=f"페이지를 읽고 리뷰를 모으는 중이에요… (리뷰 {limit}개 기준 약 {max(10, limit // 7)}초)")
+        progress = lambda done, total: bar.progress(min(done / max(total, 1), 1.0),
+                                                    text=f"리뷰 읽는 중… {done}/{total}개")
+        result = read_link_cached(url, limit, progress)
+        bar.empty()
     except fetcher.FetchError as e:
         st.session_state.update(notes=[str(e) + " 아래 칸에 직접 붙여넣어 주세요."], auto_run=False, found="")
         return
     st.session_state.update(title=result["title"], ad=result["ad"], ingredients=result["ingredients"],
                             reviews=result["reviews"], notes=result["notes"], auto_run=True,
-                            found=_found_summary(result), review_total=result.get("review_total", 0))
+                            found=_found_summary(result), review_total=result.get("review_total", 0),
+                            review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False))
 
 
 def _found_summary(result):
@@ -69,20 +75,23 @@ def _found_summary(result):
     n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
     if result.get("review_total", 0) > n_rev:
-        where += f" · 전체 {result['review_total']:,}개 중 최근 리뷰"
+        how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
+        where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
     mark = lambda ok: "✅" if ok else "❌"
     return (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개 · "
             f"리뷰 {mark(n_rev)} {n_rev}개{where}")
 
 
 def load_sample(name):
-    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0)
+    st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0,
+                            review_dates=[], sampled_evenly=False)
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
 u1.text_input("🔗 제품 페이지 링크", key="url", placeholder="광고에서 본 제품 페이지 주소를 붙여넣어 주세요 (https://...)")
-u3.selectbox("읽을 리뷰 수", [30, 100, 200], index=1, key="review_limit",
-             help="많이 읽을수록 정확하지만 오래 걸려요. (100개 약 25초) 같은 링크는 1시간 동안 바로 다시 볼 수 있어요.")
+u3.selectbox("읽을 리뷰 수", [100, 200, 400], index=2, key="review_limit",
+             help="전체 기간에서 골고루 골라 읽어요. 많을수록 정확하지만 오래 걸려요 (400개 약 1분). "
+                  "같은 링크는 1시간 동안 바로 다시 볼 수 있어요.")
 u2.button("분석하기 ✨", on_click=load_link, type="primary", width="stretch")
 
 if st.session_state["found"]:
@@ -128,11 +137,12 @@ with m1:
 with m2:
     ui.score_card("광고 신뢰도", trust, "점", "과장 표현 + 광고와 실제의 차이")
 with m3:
-    if reviews["count"]:
-        sat = round(reviews["positive"] / reviews["count"] * 100)
+    sat, opinion_n = az.satisfaction(reviews)
+    if sat is not None:
         total = st.session_state.get("review_total", 0)
-        base = f"전체 {total:,}개 중 최근 {reviews['count']}개" if total > reviews["count"] else f"리뷰 {reviews['count']}개"
-        ui.score_card("리뷰 만족도", sat, "%", f"{base} 기준 (협찬 제외)")
+        moe = az.margin_of_error(sat, opinion_n, total)
+        base = f"전체 {total:,}개 중 {reviews['count']}개 분석" if total > reviews["count"] else f"리뷰 {reviews['count']}개 분석"
+        ui.score_card("리뷰 만족도", sat, "%", f"{base} · 평가 남긴 {opinion_n}개 기준 · 오차 ±{moe}%")
     else:
         ui.show('<div class="card score muted" style="padding:52px 20px">리뷰가 없어서<br>만족도를 계산하지 못했어요.</div>')
 ui.verdict(az.verdict_text(fit, trust), fit, trust)
@@ -155,6 +165,14 @@ with tab_review:
         ui.topic_cards(rm.mine(rev_text)["topics"])
         ui.section("💬 항목별 반응", "초록은 좋다는 의견, 빨강은 아쉽다는 의견이에요.")
         ui.aspect_bars(reviews["aspects"])
+        trend = az.trend_by_year(rev_text, st.session_state.get("review_dates", []), skin_type)
+        if len(trend) >= 2:
+            ui.section("📅 해마다 만족도가 어떻게 바뀌었나", "리뷰를 쓴 해별로 나눠 봤어요. 갑자기 떨어진 해가 있으면 제품이 바뀌었는지 확인해 보세요.")
+            ui.trend_bars(trend)
+        if reviews["pending"]:
+            ui.section(f"⏳ 아직 판단을 미룬 리뷰 {reviews['pending']}개",
+                       "‘아직 써본 지 얼마 안 돼 잘 모르겠다’는 리뷰예요. 불만으로 세지 않고 따로 모았어요.")
+            ui.pending_quotes(reviews["pending_quotes"][:4])
         with st.expander("숫자로 자세히 보기"):
             st.markdown(summary["text"])
             if reviews["by_skin"]:

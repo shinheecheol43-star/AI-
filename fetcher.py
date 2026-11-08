@@ -7,7 +7,7 @@
 
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
@@ -246,10 +246,13 @@ def _board_article(item):
     return title
 
 
+DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+
+
 def _board_list_page(args):
     list_url, base = args
     try:
-        soup = BeautifulSoup(fetch_html(list_url, timeout=8), "html.parser")
+        soup = BeautifulSoup(fetch_html(list_url, timeout=10), "html.parser")
     except FetchError:
         return [], 0
     items, top = [], 0
@@ -258,30 +261,54 @@ def _board_list_page(args):
         if not a:
             continue
         cells = [td.get_text(strip=True) for td in tr.find_all("td")]
-        if cells and cells[0].replace(",", "").isdigit():  # 첫 칸의 글 번호 = 이 상품 후기의 전체 개수 근처
+        if cells and cells[0].replace(",", "").isdigit():  # 첫 칸의 글 번호 = 이 상품 후기 전체 개수 근처
             top = max(top, int(cells[0].replace(",", "")))
-        items.append((re.sub(r"\s+", " ", a.get_text(" ", strip=True)), urljoin(base, a["href"])))
+        m = DATE.search(tr.get_text(" "))
+        items.append((re.sub(r"\s+", " ", a.get_text(" ", strip=True)), urljoin(base, a["href"]),
+                      m.group(0) if m else ""))
     return items, top
 
 
-def _cafe24_board(url, product_no, limit=100):
-    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 이 상품의 최근 후기를 limit개까지 읽는다.
-    반환: (후기 목록, 게시판에 있는 이 상품 후기 전체 개수 추정)"""
+def _spread_pages(n_pages, k):
+    """1쪽부터 마지막 쪽까지 k개 쪽을 고르게 고른다. (최근 리뷰만 보지 않도록)"""
+    if k >= n_pages:
+        return list(range(1, n_pages + 1))
+    if k == 1:
+        return [1]
+    return sorted({1 + round(i * (n_pages - 1) / (k - 1)) for i in range(k)})
+
+
+def _cafe24_board(url, product_no, limit=400, progress=None):
+    """카페24 상품 후기 게시판에서 이 상품의 후기를 전체 기간에 걸쳐 고르게 limit개 읽는다.
+    반환: ([{"text", "date"}], 게시판의 이 상품 후기 전체 개수)"""
     base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-    pages = max(1, -(-limit // 15))
-    jobs = [(f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}&page={n}", base)
-            for n in range(1, pages + 1)]
+    list_url = f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}&page={{}}"
+    first, total = _board_list_page((list_url.format(1), base))
+    if not first:
+        return [], 0
+    per_page = len(first)
+    n_pages = max(1, -(-max(total, per_page) // per_page))
+    pages = _spread_pages(n_pages, max(1, -(-limit // per_page)))
     with ThreadPoolExecutor(max_workers=6) as pool:
-        listed = list(pool.map(_board_list_page, jobs))
-    links, total = {}, 0
-    for items, top in listed:
-        total = max(total, top)
-        for title, link in items:
-            links.setdefault(link.split("?")[0], (title, link))  # 같은 제목('만족')이어도 글마다 따로
-    items = list(links.values())[:limit]
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        texts = list(pool.map(_board_article, items))
-    return [t[:300] for t in texts if len(t) >= 2], total
+        listed = list(pool.map(_board_list_page, [(list_url.format(p), base) for p in pages if p != 1]))
+    rows = (first if 1 in pages else []) + [r for items, _ in listed for r in items]
+    seen, picked = set(), []
+    for title, link, date in rows:
+        key = link.split("?")[0]  # 같은 제목('만족')이어도 글마다 따로
+        if key not in seen:
+            seen.add(key)
+            picked.append((title, link, date))
+    picked = picked[:limit]
+
+    results = [None] * len(picked)
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(_board_article, (t, l)): i for i, (t, l, _) in enumerate(picked)}
+        for done, fut in enumerate(as_completed(futures), start=1):
+            results[futures[fut]] = fut.result()
+            if progress and done % 10 == 0:
+                progress(done, len(picked))
+    out = [{"text": t[:300], "date": d} for t, (_, _, d) in zip(results, picked) if t and len(t) >= 2]
+    return out, max(total, len(out))
 
 
 def _crema(url, product_no):
@@ -291,12 +318,12 @@ def _crema(url, product_no):
     return _reviews_from_page(f"https://review4.cre.ma/{domain}/products/reviews?product_code={product_no}&iframe=1")
 
 
-def read_link(url, review_limit=100):
+def read_link(url, review_limit=400, progress=None):
     url = url.strip()
     result = parse(fetch_html(url))
     # 상품 페이지에서 찾은 글 중 평가가 없는 건 안내 문구일 가능성이 높아서 뺀다
     reviews = [r for r in (result["reviews"].split("\n") if result["reviews"] else []) if _has_opinion(r)]
-    sources, total = [], 0
+    sources, total, dated = [], 0, []
     if len(reviews) < 10:  # 적으면 다른 곳도 찾아본다
         extra = []
         for src in result["frames"]:
@@ -306,9 +333,10 @@ def read_link(url, review_limit=100):
                 sources.append("리뷰 창")
         product_no = _product_no(url)
         if product_no and not extra:
-            got, total = _cafe24_board(url, product_no, review_limit)
-            if got:
-                extra += got
+            items, total = _cafe24_board(url, product_no, review_limit, progress)
+            if items:
+                extra += [it["text"] for it in items]
+                dated = items
                 sources.append("상품 후기 게시판")
         if product_no and not extra:
             got = [r for r in _crema(url, product_no) if _has_opinion(r)]
@@ -324,6 +352,8 @@ def read_link(url, review_limit=100):
     result["reviews"] = "\n".join(reviews)
     result["sources"] = sources
     result["review_total"] = total
+    result["review_dates"] = [it["date"] for it in dated[:review_limit]] if dated else []
+    result["sampled_evenly"] = bool(dated) and total > len(reviews)
     return result
 
 

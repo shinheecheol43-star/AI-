@@ -397,3 +397,18 @@ def ad_mentions(items):
         color, icon = (GOOD, "👍") if tone > 0 else (BAD, "👎") if tone < 0 else ("#6B5E68", "🤔")
         rows += f'<div class="mini-quote" style="border-color:{color}">{icon} “{esc(text)}”</div>'
     show(f'<div class="card">{rows}</div>')
+
+
+def trend_bars(trend):
+    rows = ""
+    for year, sat, n in trend:
+        color = _tone(sat)
+        rows += (f'<div class="bar-row"><div class="bar-label">{esc(year)}년</div><div class="bar-track" style="height:16px">'
+                 f'<div style="width:{sat}%; background:{color}"></div></div>'
+                 f'<div class="bar-num" style="width:120px"><b style="color:{color}">{sat}%</b> · 리뷰 {n}개</div></div>')
+    show(f'<div class="card">{rows}</div>')
+
+
+def pending_quotes(items):
+    rows = "".join(f'<div class="mini-quote" style="border-color:#C9B8C0">⏳ “{esc(q)}”</div>' for q in items)
+    show(f'<div class="card">{rows}</div>')
