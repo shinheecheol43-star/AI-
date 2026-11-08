@@ -92,6 +92,7 @@ footer { visibility: hidden; }
 .ing-desc { font-size: .88rem; color: #6B5E68; margin-top: 3px; }
 .ad-quote { background: #FFF5F7; border: 1px dashed #F2B8C6; border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-weight: 600; }
 .mini-quote { border-left: 4px solid; background: #FFFBFA; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: .9rem; color: #4A3B47; }
+.one-pct { text-align: center; color: #B7791F; background: #FFF5DC; border-radius: 10px; padding: 6px; margin: 8px 0; font-size: .85rem; }
 .mini { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: .72rem; font-weight: 700; margin-left: 4px; }
 @media (max-width: 640px) {
   .block-container { padding-top: 2.6rem; }
@@ -287,8 +288,14 @@ def ingredient_summary(sm):
 def ingredient_list(rows):
     styles = {"⚠️ 주의": (BAD, BAD_BG), "✅ 잘 맞음": (GOOD, GOOD_BG), "➖ 보통": ("#6B5E68", "#F3EEF0"),
               "❔ 사전에 없음": ("#8A7A84", "#FFFFFF")}
-    items = ""
+    items, divided = "", False
+    amount_style = {"가장 많음": ("#2D1B2E", "#F3EEF0"), "많은 편": ("#2D1B2E", "#F7F1F3"), "1% 이상": ("#6B5E68", "#F7F1F3"),
+                    "적은 편": ("#8A7A84", "#FFFFFF"), "최대 1%": (WARN, WARN_BG), "1% 이하": ("#8A7A84", "#FFFFFF")}
     for r in rows:
+        if r.get("함량") == "1% 이하" and not divided:
+            items += ('<div class="one-pct">── 여기부터는 <b>1% 이하</b>로 들어 있어요 '
+                      '(바로 위 방부제가 법적으로 최대 1%까지만 넣을 수 있어서) ──</div>')
+            divided = True
         color, bg = styles[r["나에게"]]
         badges = ""
         if r["주요"]:
@@ -301,32 +308,47 @@ def ingredient_list(rows):
             badges += '<span class="mini" style="background:#F3EEF0; color:#6B5E68">방부제</span>'
         if r["추정"]:
             badges += '<span class="mini" style="background:#fff; color:#8A7A84; border:1px solid #E5D8DC">이름으로 추정</span>'
+        if r.get("함량"):
+            ac, ab = amount_style.get(r["함량"], ("#6B5E68", "#F3EEF0"))
+            badges += f'<span class="mini" style="background:{ab}; color:{ac}; border:1px solid #E5D8DC">양: {esc(r["함량"])}</span>'
+        memo = (f'<div class="ing-desc" style="color:{ROSE}">💡 {esc(r["농도 메모"])}</div>' if r.get("농도 메모") else "")
         verdict = "판단 보류" if r["나에게"] == "❔ 사전에 없음" else r["나에게"]
         reason = f' · {esc(r["이유"])}' if r["이유"] else ""
         items += (f'<div class="ing-row"><div class="ing-num">{r["순서"]}</div><div class="ing-main">'
                   f'<div><b>{esc(r["성분"])}</b> <span class="muted">{esc(r["분류"])}</span> {badges}</div>'
-                  f'<div class="ing-desc">{esc(r["설명"])}</div></div>'
+                  f'<div class="ing-desc">{esc(r["설명"])}</div>{memo}</div>'
                   f'<span class="badge" style="background:{bg}; color:{color}; border:1px solid {color}33">'
                   f'{esc(verdict)}{reason}</span></div>')
     show(f'<div class="card">{items}</div>')
 
 
 def trust_breakdown(score, items):
+    """items: [(설명, 점수 변화, 그룹)]. 그룹별로 묶어서 보여준다."""
     color = _tone(score)
-    rows = ""
-    for label, delta in items:
-        if delta == 0:
-            rows += (f'<div class="claim"><div>⚠️ {esc(label)}</div>'
-                     f'<b style="color:{WARN}">감점 없음</b></div>')
+    level = ("광고 내용을 비교적 믿을 만해요" if score >= 80 else
+             "광고에 근거가 부족한 부분이 있어요. 아래 항목을 확인해 보세요" if score >= 55 else
+             "광고를 그대로 믿기 어려워요. 실제 리뷰를 먼저 보세요")
+    rows, last_group = "", None
+    for label, delta, group in items:
+        if group and group != last_group:
+            sub = sum(d for _, d, g in items if g == group)
+            rows += (f'<div style="display:flex; justify-content:space-between; margin-top:12px; font-weight:800">'
+                     f'<span>{esc(group)}</span><span style="color:{BAD if sub else GOOD}">{sub if sub else "감점 없음"}</span></div>')
+            last_group = group
+        if not group:
+            rows += f'<div class="claim"><div>{esc(label)}</div><b>+{delta}</b></div>'
             continue
-        sign_color = "#2D1B2E" if delta > 0 else BAD
-        rows += (f'<div class="claim"><div>{esc(label)}</div>'
-                 f'<b style="color:{sign_color}">{"+" if delta > 0 else ""}{delta}</b></div>')
-    if all(d >= 0 for _, d in items):
-        rows += '<div class="muted" style="padding-top:8px">감점할 만한 과장 표현이나 리뷰와 다른 주장이 없었어요.</div>'
-    show(f'<div class="card"><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:6px">'
+        shown = f'<b style="color:{BAD}">{delta}</b>' if delta else '<b style="color:#8A7A84">0</b>'
+        rows += f'<div class="claim" style="padding-left:12px"><div class="ing-desc">{esc(label)}</div>{shown}</div>'
+    groups = ["① 광고 표현", "② 근거 제시", "③ 실제 리뷰와 비교", "④ 성분 근거", "⑤ 광고를 보고 산 사람들"]
+    clean = [g for g in groups if not any(gr == g for _, _, gr in items)]
+    if clean:
+        rows += f'<div class="muted" style="margin-top:12px">✅ 문제 없음: {esc(", ".join(clean))}</div>'
+    show(f'<div class="card"><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:4px; flex-wrap:wrap">'
          f'<span style="font-size:2rem; font-weight:800; color:{color}">{score}점</span>'
-         f'<span class="muted">광고 신뢰도 계산 과정</span></div>{rows}</div>')
+         f'<span style="font-weight:700; color:{color}">{esc(level)}</span></div>'
+         f'<div class="muted">100점에서 시작해 5가지 기준으로 깎았어요. 기준마다 최대로 깎을 수 있는 점수가 정해져 있어요.</div>'
+         f'{rows}</div>')
 
 
 def claim_cards(cards, n_reviews):
@@ -411,4 +433,50 @@ def trend_bars(trend):
 
 def pending_quotes(items):
     rows = "".join(f'<div class="mini-quote" style="border-color:#C9B8C0">⏳ “{esc(q)}”</div>' for q in items)
+    show(f'<div class="card">{rows}</div>')
+
+
+def ingredient_groups(groups, total):
+    from ingredients_info import GROUPS
+    rows = ""
+    for g in GROUPS:
+        names = groups.get(g, [])
+        if not names:
+            continue
+        rows += (f'<div class="bar-row" style="align-items:flex-start"><div class="bar-label" style="width:150px">{esc(g)}</div>'
+                 f'<div style="flex:1"><div class="bar-track" style="height:12px">'
+                 f'<div style="width:{len(names) / total * 100}%; background:{ROSE}"></div></div>'
+                 f'<div class="ing-desc">{esc(", ".join(names))}</div></div>'
+                 f'<div class="bar-num">{len(names)}개</div></div>')
+    show(f'<div class="card">{rows}</div>')
+
+
+def ingredient_alerts(summary):
+    parts = ""
+    if summary.get("marker"):
+        name, idx, why = summary["marker"]
+        parts += (f'<div class="mini-quote" style="border-color:{WARN}">📏 <b>{esc(name)}</b>({idx}번째)은 {esc(why)}예요. '
+                  f'그래서 <b>{idx + 1}번째 성분부터는 모두 1% 이하</b>로 들어 있어요.</div>')
+    else:
+        parts += ('<div class="mini-quote" style="border-color:#C9B8C0">📏 함량의 기준이 되는 성분(최대 1%로 정해진 방부제)이 없어서, '
+                  '순서로만 양을 짐작했어요.</div>')
+    for msg in summary.get("combos", []):
+        parts += f'<div class="mini-quote" style="border-color:{BAD}">⚠️ {esc(msg)}</div>'
+    show(f'<div class="card">{parts}</div>')
+
+
+def claim_support(items):
+    if not items:
+        show('<div class="card muted">광고에서 피지·보습·진정·미백·주름 같은 효과를 말하지 않았거나, 전성분이 없어요.</div>')
+        return
+    rows = ""
+    for it in items:
+        if it["ok"]:
+            found = ", ".join(f"{n}({i}번째 · {amt})" for n, i, amt in it["found"])
+            rows += (f'<div class="claim"><div><b>‘{esc(it["keyword"])}’</b><div class="ing-desc">근거 성분: {esc(found)}</div></div>'
+                     f'<span class="badge" style="background:{GOOD_BG}; color:{GOOD}">✅ 성분 근거 있음</span></div>')
+        else:
+            rows += (f'<div class="claim"><div><b>‘{esc(it["keyword"])}’</b><div class="ing-desc">이 효과를 내는 대표 성분이 '
+                     f'전성분에서 보이지 않아요.</div></div>'
+                     f'<span class="badge" style="background:{BAD_BG}; color:{BAD}">❌ 성분 근거 없음</span></div>')
     show(f'<div class="card">{rows}</div>')

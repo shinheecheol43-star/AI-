@@ -136,7 +136,10 @@ ingredients = az.analyze_ingredients(ing_text, profile)
 ad = az.analyze_ad(ad_text)
 reviews = az.analyze_reviews(rev_text, skin_type)
 claims = az.compare_claims(ad_text, reviews)
-fit, trust = az.scores(ingredients, ad, reviews, claims)
+fit, _ = az.scores(ingredients, ad, reviews, claims)
+ing_rows, ing_summary = az.ingredient_report(ing_text, profile)
+rep = ad_report.build(ad_text, reviews, rev_text, ing_rows)
+trust = rep["trust"]
 
 st.divider()
 ui.product_title(st.session_state["title"])
@@ -145,7 +148,7 @@ m1, m2, m3 = st.columns(3)
 with m1:
     ui.score_card("나와의 적합도", fit, "점", "성분 + 같은 피부 리뷰 기준")
 with m2:
-    ui.score_card("광고 신뢰도", trust, "점", "과장 표현 + 광고와 실제의 차이")
+    ui.score_card("광고 신뢰도", trust, "점", "표현 · 근거 · 리뷰 · 성분 · 광고 후기 5가지 기준")
 with m3:
     sat, opinion_n = az.satisfaction(reviews)
     if sat is not None:
@@ -196,9 +199,15 @@ with tab_review:
 with tab_ing:
     ui.section("🧪 내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
                f" · 피하는 성분: {', '.join(avoid) or '없음'}")
-    ing_rows, ing_summary = az.ingredient_report(ing_text, profile)
     if ing_rows:
         ui.ingredient_summary(ing_summary)
+        ui.section("🧩 성분 구성", "어떤 역할의 성분이 몇 개 들어 있는지예요.")
+        ui.ingredient_groups(ing_summary["groups"], ing_summary["total"])
+        ui.section("📏 얼마나 들어 있을까?", "전성분은 많이 든 순서로 적어요. 법으로 양이 정해진 성분을 기준으로 함량을 짐작했어요.")
+        ui.ingredient_alerts(ing_summary)
+        if ad_text:
+            ui.section("🔗 광고에서 말한 효과, 성분으로 뒷받침될까?")
+            ui.claim_support(rep["support"])
         ui.section("📋 성분 하나씩 보기", "적힌 순서대로예요. 번호가 작을수록 많이 들어 있어요.")
         ui.ingredient_list(ing_rows)
         if ing_summary["guessed"]:
@@ -207,8 +216,7 @@ with tab_ing:
         ui.show('<div class="card muted">분석할 수 있는 성분이 없어요. 전성분을 붙여넣어 주세요.</div>')
 
 with tab_ad:
-    rep = ad_report.build(ad_text, reviews, rev_text)
-    ui.section(f"📊 광고 신뢰도 {trust}점은 이렇게 나왔어요", "100점에서 시작해 문제가 있을 때마다 깎았어요.")
+    ui.section(f"📊 광고 신뢰도 {trust}점은 이렇게 나왔어요")
     ui.trust_breakdown(trust, rep["breakdown"])
 
     ui.section("🔎 광고에서 말한 효과, 리뷰로 확인해 봤어요",
@@ -224,6 +232,10 @@ with tab_ad:
             st.caption(f"리뷰로 확인하지 못한 주장: {', '.join(rep['unchecked'])} → 샘플로 직접 확인해 보는 게 좋아요.")
     else:
         ui.show('<div class="card muted">광고에서 보습·진정·트러블 같은 효과 주장을 찾지 못했어요.</div>')
+
+    if rep["support"]:
+        ui.section("🔗 광고 효과 ↔ 성분 근거", "광고에서 말한 효과를 내는 대표 성분이 실제로 들어 있는지예요.")
+        ui.claim_support(rep["support"])
 
     ui.section("🔢 숫자·시험 결과 광고, 이렇게 읽으세요")
     ui.number_and_tests(rep["numbers"], rep["has_condition"], rep["tests"])

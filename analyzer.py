@@ -117,7 +117,8 @@ def _match(token):
 
 def ingredient_report(text, profile):
     """전성분을 적힌 순서대로 하나씩 설명하고, 요약 정보를 만든다."""
-    from ingredients_info import ALLERGENS, DESC, FUNCTIONAL, PRESERVATIVES, guess
+    from ingredients_info import (ALLERGENS, COMBOS, DESC, FUNCTIONAL, FUNCTIONAL_DOSE, GROUP_OF, GUESS_GROUP,
+                                  ONE_PERCENT_MARKERS, PRESERVATIVES, guess)
     mine = {profile["skin_type"], *profile["concerns"], *profile["avoid"]}
     rows = []
     for idx, token in enumerate(_tokens(text), start=1):
@@ -140,8 +141,45 @@ def ingredient_report(text, profile):
             "알레르기": any(token.startswith(a) for a in ALLERGENS),
             "방부제": any(token.startswith(p) for p in PRESERVATIVES) or category == "방부제",
             "주요": idx <= 5,
+            "그룹": GROUP_OF.get(name or "", GUESS_GROUP.get(category, "❔ 기타")),
         })
+
+    # 함량 추정: 전성분은 많이 든 순서. 최대 1%로 정해진 성분(페녹시에탄올) 뒤는 모두 1% 이하
+    marker = next((r for r in rows if r["사전 이름"] in ONE_PERCENT_MARKERS), None)
+    n = len(rows)
+    for r in rows:
+        if marker and r["순서"] > marker["순서"]:
+            r["함량"] = "1% 이하"
+        elif marker and r["순서"] == marker["순서"]:
+            r["함량"] = "최대 1%"
+        elif r["순서"] <= 3:
+            r["함량"] = "가장 많음"
+        elif r["순서"] <= max(5, n // 3):
+            r["함량"] = "많은 편"
+        elif marker:
+            r["함량"] = "1% 이상"
+        else:
+            r["함량"] = "적은 편"
+        # 기능성 원료가 충분히 들어 있을 만한 위치인지
+        dose = FUNCTIONAL_DOSE.get(r["사전 이름"])
+        if dose:
+            if r["사전 이름"] == "아데노신":
+                r["농도 메모"] = dose
+            elif r["함량"] in ("1% 이하", "최대 1%"):
+                r["농도 메모"] = dose + " 이 제품은 1% 이하 구간에 있어서 기능성 농도보다 적게 들어 있어요."
+            elif r["순서"] <= max(5, n // 3):
+                r["농도 메모"] = dose + f" 이 제품은 {r['순서']}번째(앞쪽)라 충분히 들어 있을 가능성이 높아요."
+            else:
+                r["농도 메모"] = dose + " 정확한 양은 표시돼 있지 않아요. 제품이 '기능성 화장품' 표시가 있는지 확인해 보세요."
+
+    names = {r["사전 이름"] for r in rows}
+    combos = [msg for a, b, msg in COMBOS if names & a and names & b]
+    groups = {}
+    for r in rows:
+        groups.setdefault(r["그룹"], []).append(r["성분"])
     summary = {
+        "marker": (marker["성분"], marker["순서"], ONE_PERCENT_MARKERS[marker["사전 이름"]]) if marker else None,
+        "groups": groups, "combos": combos,
         "total": len(rows),
         "main": [r["성분"] for r in rows if r["주요"]],
         "functional": [(r["성분"], r["기능성"]) for r in rows if r["기능성"]],
@@ -694,3 +732,21 @@ def overall_comment(reviews, claims, skin_type, fit):
     else:
         out.append(f"👉 나와 같은 피부의 리뷰가 부족하고 성분 적합도도 높지 않아서, **신중하게 고르는 게 좋아요.**")
     return " ".join(out)
+
+
+def claim_support(ad_text, rows):
+    """광고에서 말한 효과마다, 그 효과를 뒷받침하는 대표 성분이 들어 있는지.
+    반환: [{"keyword", "found": [(성분, 순서, 함량)], "ok": bool}]"""
+    from ingredients_info import SUPPORT
+    if not rows:
+        return []
+    by_name = {r["사전 이름"]: r for r in rows}
+    out, seen = [], set()
+    for kw, names in SUPPORT.items():
+        if kw not in ad_text or kw in seen:
+            continue
+        seen.add(kw)
+        found = [(by_name[n]["성분"], by_name[n]["순서"], by_name[n]["함량"]) for n in names if n in by_name]
+        found.sort(key=lambda x: x[1])
+        out.append({"keyword": kw, "found": found, "ok": bool(found)})
+    return out

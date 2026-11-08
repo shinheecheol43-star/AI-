@@ -61,7 +61,7 @@ def _where_all(words, sentences):
     return real or hits
 
 
-def build(ad_text, reviews, review_text):
+def build(ad_text, reviews, review_text, ing_rows=None):
     sentences = _sentences(ad_text)
     ad = az.analyze_ad(ad_text)
     claims = az.compare_claims(ad_text, reviews)
@@ -89,7 +89,8 @@ def build(ad_text, reviews, review_text):
         })
 
     # 2) 숫자로 말한 주장 (예: 속피지 개선 41.12%)
-    numbers = [s for s in sentences if re.search(r"\d+(\.\d+)?\s*(%|배|시간|주|일)", s) and not re.search(r"원|ml|g\b|개입|\+", s)]
+    numbers = [s for s in sentences if re.search(r"\d+(\.\d+)?\s*(%|배|시간|주|일)", s) and not re.search(r"원|ml|g\b|개입|\+", s)
+               and not re.fullmatch(r"[^\d]*100\s*%[^\d]*", s)]  # '100%'만 있는 문장은 과장 표현에서 이미 셈
     has_condition = bool(re.search(r"\d+\s*명|시험\s*기관|대상|\d+\s*주\s*(간|사용)", ad_text))
 
     # 3) 시험·인증 문구
@@ -111,24 +112,67 @@ def build(ad_text, reviews, review_text):
         if re.search(r"광고|상세\s*페이지|홍보|후기 보고|인스타|유튜브", r) and not any(s in r for s in az.SPONSORED):
             ad_mentions.append((r if len(r) <= 120 else r[:120] + "…", rm._tone(r)))
 
-    # 6) 신뢰도 점수가 어떻게 나왔는지
-    breakdown = [("기본 점수", 100)]
-    for e in exaggerations:
-        breakdown.append((f"과장 표현 '{e['word']}'", -10))
-    for m in medical:
-        breakdown.append((f"의약품 오인 표현 '{m['word']}'", -15))
-    for card in claim_cards:
-        if card["verdict"].startswith("❌"):
-            breakdown.append((f"'{card['aspect']}' 주장이 리뷰와 다름", -15))
-        elif card["verdict"].startswith("🔶"):
-            breakdown.append((f"'{card['aspect']}' 주장에 대한 의견이 갈림", -5))
+    # 6) 성분이 광고 효과를 뒷받침하는지
+    support = az.claim_support(ad_text, ing_rows or [])
 
-    if numbers and not has_condition:
-        breakdown.append(("숫자 효과의 시험 조건(인원·기간)을 글에서 확인 못 함 · 직접 확인 필요", 0))
+    # 7) 신뢰도 점수: 100점에서 항목별로 깎는다 (한 항목이 점수를 다 깎지 않도록 항목마다 최대치가 있음)
+    breakdown = [("기본 점수", 100, "")]
+
+    def add(group, items, cap):
+        total = 0
+        for label, d in items:
+            if d < 0 and total <= cap:
+                label, d = label + " (이 항목은 최대 감점에 도달)", 0
+            elif d < 0:
+                d = max(d, cap - total)
+            total += d
+            breakdown.append((label, d, group))
+
+    add("① 광고 표현", [(f"의약품으로 오해할 표현 '{m['word']}'", -15) for m in medical]
+        + [(f"과장 표현 '{e['word']}'", -8) for e in exaggerations], -40)
+
+    big = [n for n in numbers if any(float(x) > 100 for x in re.findall(r"(\d+(?:\.\d+)?)\s*%", n))]
+    evid = []
+    if not has_condition:
+        evid += [(f"숫자 효과 “{n}”의 시험 조건(인원·기간·기관)이 글에 없음", -6) for n in numbers]
+        evid += [(f"‘{t['label']}’ 문구에 시험 내용(인원·기간)이 없음", -3) for t in tests]
+    if big:
+        evid.append((f"100%가 넘는 숫자 “{big[0]}” → 실제 체감보다 크게 느껴질 수 있음", -4))
+    add("② 근거 제시", evid, -20)
+
+    rv = []
+    for card in claim_cards:
+        n = card["good"] + card["bad"]
+        if n >= 5:
+            d = -round((100 - card["rate"]) / 100 * 25)
+            rv.append((f"‘{card['aspect']}’ 주장에 리뷰 {n}개 중 {card['rate']}% 동의", d))
+        elif n and card["bad"] > card["good"]:
+            rv.append((f"‘{card['aspect']}’ 주장을 언급한 리뷰 {n}개 중 {card['bad']}개가 반대 경험", -10))
+        elif n:
+            rv.append((f"‘{card['aspect']}’ 주장을 언급한 리뷰가 {n}개뿐이라 근거 부족", -4))
+        else:
+            rv.append((f"‘{card['aspect']}’ 주장은 리뷰로 확인할 수 없음", -6))
+    sat, _ = az.satisfaction(reviews)
+    if sat is not None and sat < 60:
+        rv.append((f"전체 리뷰 만족도가 {sat}%로 낮음", -10))
+    add("③ 실제 리뷰와 비교", rv, -35)
+
+    ing = []
+    for sp in support:
+        if not sp["ok"]:
+            ing.append((f"‘{sp['keyword']}’ 효과를 뒷받침하는 대표 성분이 전성분에 없음", -5))
+        elif all(f[2] in ("1% 이하", "최대 1%") for f in sp["found"]):
+            ing.append((f"‘{sp['keyword']}’ 효과 성분이 1% 이하로만 들어 있음", -3))
+    add("④ 성분 근거", ing, -15)
+
+    disappointed = sum(1 for r in az.split_reviews(review_text)
+                       if re.search(r"광고|홍보|인스타|유튜브|상세\s*페이지", r) and rm._tone(r) < 0)
+    add("⑤ 광고를 보고 산 사람들", [(f"‘광고에 속았다/광고와 다르다’는 리뷰 {disappointed}개", -3 * disappointed)]
+        if disappointed else [], -12)
+
+    trust = max(0, min(100, sum(d for _, d, _ in breakdown)))
     unchecked = [c["aspect"] for c in claim_cards if c["good"] + c["bad"] == 0]
-    for a in unchecked:
-        breakdown.append((f"'{a}' 주장은 리뷰로 확인 못 함 · 직접 확인 필요", 0))
     return {"claims": claim_cards, "numbers": numbers, "has_condition": has_condition, "tests": tests,
             "exaggerations": exaggerations, "medical": medical, "ad_mentions": ad_mentions[:6],
             "breakdown": breakdown, "unchecked": unchecked, "disclosed": ad["disclosed"],
-            "n_reviews": reviews["count"]}
+            "n_reviews": reviews["count"], "trust": trust, "support": support}
