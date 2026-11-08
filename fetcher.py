@@ -161,7 +161,8 @@ REVIEW_SERVICES = {"크리마(CREMA)": r"cre\.ma|crema", "브이리뷰": r"vrevi
                    "스냅리뷰": r"snapreview", "리뷰톡": r"reviewtalk"}
 
 
-MENU_ITEM = re.compile(r"^\S{2,12}(패드|크림|토너|세럼|앰플|마스크|클렌저|폼|선크림|미스트|로션|에센스|팩|오일)$")
+MENU_ITEM = re.compile(r"^\S{2,12}(패드|크림|토너|세럼|앰플|마스크|클렌저|폼|선크림|미스트|로션|에센스|팩|오일)$"
+                       r"|^\S{1,6}\s*/\s*\S{1,6}$")  # '모공 / 결', '수분 / 보습' 같은 카테고리 메뉴
 
 
 def clean_ad(text):
