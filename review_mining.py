@@ -9,6 +9,7 @@ from analyzer import NEGATIVE, POSITIVE, SPONSORED, split_reviews
 
 # 단어 끝에 붙는 조사·어미를 떼서 '촉촉하고', '촉촉해요'를 같은 '촉촉'으로 본다.
 ENDINGS = sorted([
+    "했습니다", "습니다", "합니다", "입니다", "했습니", "습니", "입니", "됩니다", "겠습니다", "더라구요", "더라고요",
     "했어요", "했는데", "하네요", "해서", "해요", "하고", "하게", "하는", "한데", "합니다", "했다", "하다", "해",
     "인데", "이에요", "예요", "네요", "어요", "아요", "에요", "이고", "이라", "이랑", "에서", "으로", "까지",
     "부터", "처럼", "보다", "니까", "는데", "지만", "고", "게", "은", "는", "이", "가", "을", "를", "도", "에",
@@ -21,8 +22,13 @@ STOPWORDS = {
     "사서", "샀어", "구매", "써보", "써봤", "쓰고", "쓰는", "바르", "발라", "바르고", "때문", "정도", "우선", "솔직히",
     "리뷰", "후기", "한번", "아직", "해서", "하고", "있고", "없고", "피부", "얼굴",
     # 좋다/별로 같은 감정 단어는 '무엇이' 좋은지가 아니라서 뺀다 (분위기 색으로만 표시)
+    "항상", "매번", "계속", "자주", "재주문", "사용중", "사용하", "감사", "고맙", "제품도", "아주", "너무너무",
     "좋아", "좋고", "좋은", "좋다", "좋네", "좋습니", "별로", "추천", "만족", "재구매", "최고", "괜찮", "아쉬", "아쉽",
 }
+
+
+# '쓰는데', '사용중', '재구매했' 처럼 '썼다/샀다'는 뜻이라 내용이 없는 단어들
+STOP_PREFIX = ("쓰", "써", "사용", "바르", "발라", "구매", "재구매", "주문", "재주문", "여전", "열심")
 
 
 def stem(word):
@@ -37,7 +43,7 @@ def _keys(text):
     out = {}
     for w in re.findall(r"[가-힣A-Za-z]{2,}", text):
         st = stem(w)
-        if len(st) < 2 or st in STOPWORDS or w in STOPWORDS:
+        if len(st) < 2 or st in STOPWORDS or w in STOPWORDS or st.startswith(STOP_PREFIX):
             continue
         out.setdefault(st[:2], st)
     return out
@@ -49,11 +55,13 @@ def _sentences(review):
 
 
 def _tone(text):
-    if any(n in text for n in NEGATIVE):
-        return -1
-    if any(p in text for p in POSITIVE):
-        return 1
-    return 0
+    """좋다/별로 같은 말과 '트러블 덜남' 같은 항목별 평가를 함께 보고 분위기를 정한다."""
+    import analyzer as az
+    score = 0
+    for c in az._clauses(text):
+        score += az._polarity(c)
+        score += sum(az._aspect_hit(c, p, n, t) for t, p, n in az.ASPECTS.values())
+    return (score > 0) - (score < 0)
 
 
 def topics(reviews, top=8):
@@ -80,8 +88,10 @@ def topics(reviews, top=8):
             continue
         used.update(sents)
         word = min(m["forms"], key=lambda f: (-m["forms"][f], len(f)))
-        quote = min(sents, key=lambda x: abs(len(x) - 22))
-        result.append({"word": word, "count": len(review_ids), "tone": sum(_tone(reviews[i]) for i in review_ids),
+        tone = sum(_tone(reviews[i]) for i in review_ids)
+        same = [x for x in sents if _tone(x) * tone >= 0] or sents  # 대표 문장은 다수 의견과 같은 쪽에서
+        quote = min(same, key=lambda x: abs(len(x) - 22))
+        result.append({"word": word, "count": len(review_ids), "tone": tone,
                        "quote": quote, "others": [x for x in sents if x != quote][:3]})
         if len(result) >= top:
             break

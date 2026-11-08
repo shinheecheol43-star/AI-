@@ -156,6 +156,8 @@ def _find_reviews(soup):
 def _find_ad_lines(lines, limit=15):
     picked = []
     for line in lines:
+        if line.startswith("[") or line.startswith("#") and line.count("#") == 1 or "주세요" in line:
+            continue  # '[즉각 쿨링] 131 토너'처럼 다른 상품을 소개하는 메뉴
         if 6 <= len(line) <= 150 and line.count(",") < 4 and any(w in line for w in CLAIM_WORDS):
             picked.append(line)
         if len(picked) >= limit:
@@ -187,6 +189,7 @@ def parse(html):
 
     title = ld["name"] or _meta(soup, "og:title") or (soup.title.get_text(strip=True) if soup.title else "")
     description = ld["description"] or _meta(soup, "og:description", "description")
+    description = re.sub(r"[ \t]*\r?\n[\s]*", "\n", description).strip()
     body_lines = [l for l in lines if l not in review_set and l != ingredients]
     ad_lines = [l for l in [description] + _find_ad_lines(body_lines) if l]
     ad_text = "\n".join(dict.fromkeys(ad_lines))
@@ -224,36 +227,47 @@ def _reviews_from_page(url):
     return _find_reviews(soup)
 
 
-def _cafe24_board(url, product_no, limit=10):
-    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 후기 제목과 내용을 읽는다."""
-    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-    list_url = f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}"
+NAVERPAY_NOTE = re.compile(r"\(\s*\d{4}-\d{2}-\d{2}[^)]*구매평\s*\)")
+
+
+def _board_article(item):
+    """후기 글 하나를 열어 본문을 읽는다. 신고 양식 같은 다른 글자는 빼고 본문 칸만 본다."""
+    title, link = item
     try:
-        soup = BeautifulSoup(fetch_html(list_url, timeout=6), "html.parser")
+        page = BeautifulSoup(fetch_html(link, timeout=6), "html.parser")
     except FetchError:
-        return []
-    links = []
-    for a in soup.find_all("a", href=True):
-        title = re.sub(r"\s+", " ", a.get_text(" ", strip=True))
-        if re.search(r"/article/|board/product/read\.html", a["href"]) and len(title) >= 4:
-            links.append((title, urljoin(base, a["href"])))
-    links = list(dict(links).items())[:limit] if links else []
+        return title
+    for cls in ("fr-view", "detail"):
+        box = page.find(attrs={"class": re.compile(rf"(^|\s){cls}(\s|$)")})
+        if box:
+            body = NAVERPAY_NOTE.sub("", re.sub(r"\s+", " ", box.get_text(" ", strip=True))).strip()
+            if body:
+                return body
+    return title
 
-    def read(item):
-        title, link = item
+
+def _cafe24_board(url, product_no, limit=30, pages=2):
+    """카페24 쇼핑몰의 상품 후기 게시판(보통 board_no=4)에서 이 상품의 후기를 읽는다."""
+    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+    links = {}
+    for page_no in range(1, pages + 1):
+        list_url = f"{base}/board/product/list.html?board_no=4&link_product_no={product_no}&page={page_no}"
         try:
-            page = BeautifulSoup(fetch_html(link, timeout=6), "html.parser")
+            soup = BeautifulSoup(fetch_html(list_url, timeout=8), "html.parser")
         except FetchError:
-            return title
-        boxes = [re.sub(r"\s+", " ", d.get_text(" ", strip=True))
-                 for d in page.find_all(attrs={"class": re.compile(r"detail|fr-view|view|content", re.I)})]
-        boxes = [b for b in boxes if 5 <= len(b) <= 1500]
-        body = max(boxes, key=len) if boxes else ""
-        return body if len(body) >= 10 else f"{title} {body}".strip()
-
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        texts = list(pool.map(read, links))
-    return [t[:300] for t in texts if len(t) >= 8]
+            break
+        before = len(links)
+        for a in soup.find_all("a", href=True):
+            title = re.sub(r"\s+", " ", a.get_text(" ", strip=True))
+            if re.search(r"/article/[^/]+/4/\d+|board/product/read\.html", a["href"]) and title:
+                link = urljoin(base, a["href"])
+                links.setdefault(link.split("?")[0], (title, link))  # 같은 제목('만족')이어도 글마다 따로
+        if len(links) == before or len(links) >= limit:
+            break
+    items = list(links.values())[:limit]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        texts = list(pool.map(_board_article, items))
+    return [t[:300] for t in texts if len(t) >= 2]
 
 
 def _crema(url, product_no):
