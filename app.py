@@ -114,7 +114,7 @@ def _found_summary(result, web_items=(), web_ing_src=""):
         sponsored = sum(i["sponsored"] for i in web_items)
         text += f"  \n🌐 인터넷 후기 · 블로그 {blog}개 · 카페 {len(web_items) - blog}개 (협찬 표시 {sponsored}개)"
     elif not web_search.keys():
-        text += "  \n🌐 블로그·카페 후기 검색은 꺼져 있어요 (네이버 검색 API 키를 넣으면 켜져요)"
+        text += "  \n🌐 블로그·카페 후기 검색은 꺼져 있어요 (카카오 검색 API 키를 넣으면 켜져요 · 무료)"
     return text
 
 
@@ -204,7 +204,7 @@ with tab_review:
     if combined:
         st.caption("쇼핑몰 리뷰가 적어서, 협찬 표시가 없는 블로그·카페 후기를 함께 분석했어요.")
     if web_items:
-        ui.section(f"🌐 블로그·카페 후기 {len(web_items)}개", f"네이버 검색 ‘{st.session_state.get('web_query', '')}’ 결과에서 "
+        ui.section(f"🌐 블로그·카페 후기 {len(web_items)}개", f"‘{st.session_state.get('web_query', '')}’ 검색 결과에서 "
                    "이 제품 이야기인 글만 골랐어요. 글 전체가 아니라 검색 요약(앞부분)을 분석했어요.")
         groups = [("🛍️ 쇼핑몰 리뷰", rev_text if not combined else st.session_state["reviews"])]
         groups += [(f"☕ 카페 후기", "\n".join(i["text"] for i in web_items if i["source"] == "카페"))]

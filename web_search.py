@@ -1,7 +1,9 @@
-"""링크에서 정보가 부족할 때, 네이버 검색 API로 블로그·카페 후기와 전성분을 더 모은다.
+"""링크에서 정보가 부족할 때, 검색 API로 블로그·카페 후기와 전성분을 더 모은다.
 
-- 네이버 검색 API는 무료예요 (하루 25,000번). developers.naver.com 에서 키를 받아
-  Streamlit 'Secrets'에 NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 으로 넣으면 켜져요.
+- 카카오(다음) 검색 API (추천): 무료, 카드 등록 없음, 블로그·카페 각각 하루 30,000번.
+  developers.kakao.com 에서 앱을 만들고 'REST API 키'를 Streamlit Secrets의 KAKAO_REST_API_KEY 에 넣으면 켜져요.
+- 네이버 검색 API (선택): 2026년부터 NAVER API HUB(네이버 클라우드)로 옮겨졌어요.
+  NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 에 API HUB에서 받은 키를 넣으면 함께 써요.
 - 검색 결과의 '요약 글(본문 일부)'만 써요. 블로그 본문을 통째로 긁어오지 않아요.
 """
 
@@ -12,39 +14,68 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
-API = "https://openapi.naver.com/v1/search/{kind}.json"
+NAVER_HUB = "https://naverapihub.apigw.ntruss.com/search/v1/{kind}"
+NAVER_OLD = "https://openapi.naver.com/v1/search/{kind}.json"   # 예전 개발자센터 키 (2027년 6월까지)
+KAKAO = "https://dapi.kakao.com/v2/search/{kind}"
 SPONSOR = re.compile(r"협찬|체험단|제공받|원고료|서포터즈|무상으로|광고|소정의|대가를|지원받|홍보")
 STOP_TITLE = {"앰플", "크림", "세럼", "토너", "로션", "에센스", "특가", "세트", "기획", "증정", "본품", "단품", "1개", "2개",
               "선크림", "마스크", "패드", "클렌저", "폼", "오일", "미스트"}
 
 
-def keys():
-    """Streamlit Secrets 또는 환경 변수에서 키를 읽는다. 없으면 None."""
-    cid = csec = None
+def _secret(name):
     try:
         import streamlit as st
-        cid, csec = st.secrets.get("NAVER_CLIENT_ID"), st.secrets.get("NAVER_CLIENT_SECRET")
+        value = st.secrets.get(name)
+        if value:
+            return value
     except Exception:
         pass
-    cid = cid or os.environ.get("NAVER_CLIENT_ID")
-    csec = csec or os.environ.get("NAVER_CLIENT_SECRET")
-    return (cid, csec) if cid and csec else None
+    return os.environ.get(name)
+
+
+def keys():
+    """사용할 수 있는 검색 서비스와 키. 반환: {"kakao": 키, "naver": (id, secret)} (없는 것은 빠짐) 또는 {}"""
+    out = {}
+    if _secret("KAKAO_REST_API_KEY"):
+        out["kakao"] = _secret("KAKAO_REST_API_KEY")
+    if _secret("NAVER_CLIENT_ID") and _secret("NAVER_CLIENT_SECRET"):
+        out["naver"] = (_secret("NAVER_CLIENT_ID"), _secret("NAVER_CLIENT_SECRET"))
+    return out
 
 
 def _clean(text):
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", text or ""))).strip()
 
 
-def _search(kind, query, start, credentials):
-    cid, csec = credentials
+def _get(url, params, headers):
     try:
-        res = requests.get(API.format(kind=kind), params={"query": query, "display": 100, "start": start, "sort": "sim"},
-                           headers={"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}, timeout=8)
-        if res.status_code != 200:
-            return []
-        return res.json().get("items", [])
+        res = requests.get(url, params=params, headers=headers, timeout=8)
+        return res.json() if res.status_code == 200 else None
     except (requests.RequestException, ValueError):
-        return []
+        return None
+
+
+def _search(kind, query, page, credentials):
+    """kind: blog | cafe | web. 결과를 같은 모양으로 맞춘다: [{title, description, link, postdate(YYYYMMDD), source}]"""
+    out = []
+    if "kakao" in credentials:
+        k_kind = {"blog": "blog", "cafe": "cafe", "web": "web"}[kind]
+        data = _get(KAKAO.format(kind=k_kind), {"query": query, "page": page, "size": 50, "sort": "accuracy"},
+                    {"Authorization": f"KakaoAK {credentials['kakao']}"})
+        for d in (data or {}).get("documents", []):
+            out.append({"title": d.get("title", ""), "description": d.get("contents", ""), "link": d.get("url", ""),
+                        "postdate": re.sub(r"\D", "", d.get("datetime", ""))[:8], "source": kind})
+    if "naver" in credentials:
+        n_kind = {"blog": "blog", "cafe": "cafearticle", "web": "webkr"}[kind]
+        cid, csec = credentials["naver"]
+        params = {"query": query, "display": 100, "start": (page - 1) * 100 + 1, "sort": "sim"}
+        data = _get(NAVER_HUB.format(kind=n_kind), params, {"X-NCP-APIGW-API-KEY-ID": cid, "X-NCP-APIGW-API-KEY": csec})
+        if data is None:  # 예전 개발자센터 키일 수 있음
+            data = _get(NAVER_OLD.format(kind=n_kind), params, {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec})
+        for d in (data or {}).get("items", []):
+            out.append({"title": d.get("title", ""), "description": d.get("description", ""), "link": d.get("link", ""),
+                        "postdate": d.get("postdate", ""), "source": kind})
+    return out
 
 
 def product_words(title):
@@ -83,8 +114,8 @@ def collect_reviews(title, brand="", limit=300):
     base = make_query(title, brand)
     query = f"{base} 후기"
     words = product_words(title)[:4] + ([_brand(brand)] if _brand(brand) else [])
-    jobs = [(kind, q, start) for kind in ("blog", "cafearticle") for q in (query, f"{base} 사용 후기")
-            for start in range(1, min(limit, 300) + 1, 100)]
+    pages = 3 if "naver" in credentials and "kakao" not in credentials else 4  # 카카오는 한 번에 50개, 네이버는 100개
+    jobs = [(kind, q, page) for kind in ("blog", "cafe") for q in (query, f"{base} 사용 후기") for page in range(1, pages + 1)]
     with ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(lambda j: (j[0], _search(j[0], j[1], j[2], credentials)), jobs))
     out, seen = [], set()
@@ -111,7 +142,7 @@ def find_ingredients(title, brand=""):
         return "", ""
     words = product_words(title)[:4] + ([_brand(brand)] if _brand(brand) else [])
     best, src = "", ""
-    for kind in ("blog", "webkr", "cafearticle"):
+    for kind in ("blog", "web", "cafe"):
         for it in _search(kind, f"{make_query(title, brand)} 전성분", 1, credentials):
             d = _clean(it.get("description"))
             if "정제수" not in d or not _relevant(_clean(it.get("title")) + " " + d, words):
