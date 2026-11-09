@@ -5,6 +5,7 @@
 - 성분이 이미지로만 되어 있거나, 리뷰를 나중에 불러오는 대형 쇼핑몰은 못 가져올 수 있습니다.
 """
 
+import html
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -185,6 +186,7 @@ def _find_ad_lines(lines, limit=15):
 
 def clean_title(title):
     """'[55%] [더블기획] 제품명 _1개당 22,375원' 같은 할인 문구를 정리한다."""
+    title = re.sub(r"<[^>]+>", " ", html.unescape(title))  # 제목 속 HTML 태그(<br /> 등) 지우기
     # '제품명 이벤트 혜택/52% 특가/6개/118000원/증정' → '/'로 나눈 조각 중 홍보 문구가 나오기 전까지만
     PROMO = r"특가|할인|증정|혜택|이벤트|\d+%|\d[\d,]*원|\d+\s*(개|BOX|box|세트|매)|기획|사은품|무료배송|1\+1"
     parts = title.split("/")
@@ -292,6 +294,10 @@ def _board_list_page(args):
         if not a:
             continue
         cells = [td.get_text(strip=True) for td in tr.find_all("td")]
+        row_text = tr.get_text(" ", strip=True)
+        if (cells and not cells[0].replace(",", "").isdigit() and re.search(r"공지|notice", str(tr), re.I)) or \
+                re.search(r"적립금\s*안내|리뷰\s*작성\s*안내|REVIEW\s*MILEAGE|이벤트\s*안내", row_text, re.I):
+            continue  # 맨 위에 고정된 공지 글은 리뷰가 아님
         if cells and cells[0].replace(",", "").isdigit():  # 첫 칸의 글 번호 = 이 상품 후기 전체 개수 근처
             top = max(top, int(cells[0].replace(",", "")))
         m = DATE.search(tr.get_text(" "))
@@ -325,7 +331,8 @@ def _cafe24_board(url, product_no, limit=400, progress=None):
     rows = (first if 1 in pages else []) + [r for items, _ in listed for r in items]
     seen, picked = set(), []
     for title, link, date in rows:
-        key = link.split("?")[0]  # 같은 제목('만족')이어도 글마다 따로
+        # 같은 제목('만족')이어도 글마다 따로. 'read.html?no=123'처럼 글 번호가 ? 뒤에 있는 쇼핑몰도 있어서 page= 만 빼고 비교
+        key = re.sub(r"[?&](page|link_product_no|board_no|cate_no)=[^&]*", "", link)
         if key not in seen:
             seen.add(key)
             picked.append((title, link, date))
@@ -338,7 +345,8 @@ def _cafe24_board(url, product_no, limit=400, progress=None):
             results[futures[fut]] = fut.result()
             if progress and done % 10 == 0:
                 progress(done, len(picked))
-    out = [{"text": t[:300], "date": d} for t, (_, _, d) in zip(results, picked) if t and len(t) >= 2]
+    out = [{"text": t[:300], "date": d} for t, (_, _, d) in zip(results, picked)
+           if t and len(t) >= 2 and not re.search(r"적립금\s*안내|REVIEW\s*MILEAGE|리뷰\s*작성\s*안내", t, re.I)]
     return out, max(total, len(out))
 
 

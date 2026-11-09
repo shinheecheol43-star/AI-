@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36"}
 START = re.compile(r"전\s*성\s*분|모든\s*성분|성\s*분\s*명|INGREDIENTS", re.I)
-STOP = re.compile(r"사용\s*(전|시|상|할\s*때)\s*(의\s*)?주의|주의\s*사항|사용\s*방법|사용\s*기한|보관\s*방법|품질\s*보증|"
+STOP = re.compile(r"\d\s*\.\s*화장품\s*사용|화장품\s*사용\s*시|화장품\s*법|사용\s*(전|시|상|할\s*때)\s*(의\s*)?주의|주의\s*사항|사용\s*방법|사용\s*기한|보관\s*방법|품질\s*보증|"
                   r"화장품\s*책임|제조\s*(국|업자|번호)|기능성\s*화장품|용량|중량|소비자\s*상담")
 # 이름이 이렇게 끝나면 성분 하나가 끝난 것으로 본다 (쉼표가 빠져도 나누기 위해)
 ENDINGS = ("추출물", "발효물", "여과물", "오일", "워터", "수", "올", "콜", "린", "드", "트", "인", "산", "머", "텐", "민",
@@ -31,7 +31,9 @@ ENDINGS = ("추출물", "발효물", "여과물", "오일", "워터", "수", "�
 # 글자 인식이 자주 헷갈리는 글자 고치기
 FIXES = [
     (r"[추주수]\s*[출줄]\s*[물몰]", "추출물"), (r"추출\s*몰", "추출물"), (r"발효\s*몰", "발효물"), (r"추출\s+물", "추출물"), (r"핵실", "헥실"), (r"핵산", "헥산"),
-    (r"^1?2-?(한|핵산|헥산|핵|헥)?\s*다이올", "1,2-헥산다이올"), (r"포타슴", "포타슘"), (r"클라이콜", "글라이콜"),
+    (r"^1?2-?(한|핵산|헥산|헤산|해산|핵|헥)?\s*다이올", "1,2-헥산다이올"), (r"(헤산|해산)다이올", "헥산다이올"),
+    (r"(?<=[가-힣])\d{1,2}$", ""),  # '펜틸렌글라이콜1'처럼 이름 끝에 붙은 잘못 읽은 숫자 ('세테스-20'처럼 - 뒤 숫자는 그대로)
+    (r"소[듬등튬]", "소듐"), (r"펠타이드", "펩타이드"), (r"포타[승숨슴]", "포타슘"), (r"솔베이트", "소르베이트"), (r"포타슴", "포타슘"), (r"클라이콜", "글라이콜"),
     (r"꿀품", "꿀풀"), (r"([가-힣])(익|위|임)추출물", r"\1잎추출물"), (r"(껄|낄|겁질|껍칠)추출물", "껍질추출물"),
     (r"야풍년화", "아풍년화"), (r"/2?10-30", "/C10-30"), (r"^l", "1"), (r"소튬", "소듐"), (r"글리세런", "글리세린"),
     (r"정재수", "정제수"), (r"정제 수", "정제수"), (r"밥질추출물", "밤껍질추출물"),
@@ -112,7 +114,13 @@ def extract_section(text):
             return ""
         seg = text[i:]
     else:
-        seg = text[m.end():]
+        # 표 왼쪽 칸에 '전성분'이 세로 가운데에 있으면, 목록 앞부분이 이 글자보다 먼저 읽힌다 → '정제수'부터 시작
+        before = text[max(0, m.start() - 900): m.start()]
+        j = before.rfind("정제수")
+        if j >= 0 and before[j:].count(",") >= 2:
+            seg = before[j:] + " " + text[m.end():]
+        else:
+            seg = text[m.end():]
     e = STOP.search(seg)
     seg = seg[: e.start()] if e else seg[:2500]
     return seg.strip(" :：\n")
@@ -190,11 +198,23 @@ def find_in_images(html, base_url, budget=50, max_images=60):
         items.append((i, (u, d, img.size, img)))
     order = sorted(((i, (u, d, s)) for i, (u, d, s, _) in items), key=_priority)
     images = {i: img for i, (_, _, _, img) in items}
+    cache = {}
+
+    def read(i):
+        if i not in cache:
+            cache[i] = _ocr(images[i]) if i in images else ""
+        return cache[i]
+
     for i, (u, _, _) in order:
         if time.time() - start > budget:
             break
-        text = _ocr(images[i])
+        text = read(i)
         if START.search(text) or text.count("정제수"):
+            # 성분표가 이미지 두 장에 걸쳐 있을 수 있어서, 앞뒤 이미지도 이어서 읽는다
+            if not START.search(text) and i - 1 in images:
+                text = read(i - 1) + "\n" + text
+            if not STOP.search(text[(START.search(text) or re.search("정제수", text)).end():]) and i + 1 in images:
+                text = text + "\n" + read(i + 1)
             seg = extract_section(text)
             cleaned = clean_ingredients(seg)
             if cleaned.count(",") >= 4:
