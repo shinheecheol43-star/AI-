@@ -61,6 +61,10 @@ def trade_list(sym, tf, side):
         sgn = np.sign(f4.close - f4.e50) * side
         sgn.index = sgn.index + pd.Timedelta("4h") - pd.Timedelta(tf)
         h4 = sgn.reindex(fr.index, method="ffill").fillna(0).to_numpy()
+    f4b = frame(sym, "4h")
+    s200 = np.sign(f4b.close - f4b.e200) * side
+    s200.index = s200.index + pd.Timedelta("4h") - pd.Timedelta(tf)
+    h4_200 = s200.reindex(fr.index, method="ffill").fillna(0).to_numpy()
     n, hold = len(c), HOLD[tf] * 3
     out = []
     for s in setups(sym, tf, side):
@@ -89,7 +93,7 @@ def trade_list(sym, tf, side):
                         disc=(px - lo) / max(h[max(0, t - 60):t].max() - lo, 1e-12),   # 하락 파동 안에서 진입가 위치 (0=바닥)
                         hour=idx[e].hour,
                         htf=float(h4[t] > 0) if h4 is not None else float(s["reg"]),
-                        atr_pct=apct[t]))
+                        atr_pct=apct[t], htf200=float(h4_200[t] > 0)))
     return out
 
 
