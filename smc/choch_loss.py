@@ -45,14 +45,22 @@ from .highwin import MAKER, TAKER, frame
 
 TFS = ("15min", "30min", "1h", "4h")
 FEATS = {"break_power": "돌파 힘", "break_body": "돌파 봉 몸통", "break_vol": "돌파 거래량", "fvg_size": "FVG 크기",
-         "stop_atr": "손절폭", "retrace": "되돌림 깊이", "wait": "대기 봉 수", "prior_drop": "직전 하락", "htf": "상위 추세"}
+         "stop_atr": "손절폭", "retrace": "되돌림 깊이", "wait": "대기 봉 수", "prior_drop": "직전 하락", "reg": "일봉 장세"}
 RULES = [("기본", {})] + [(f"약하면 탈출 {n}봉·{m}R", {"weak": (n, m)}) for n, m in product((3, 6, 12), (0.3, 0.5))] \
         + [(f"본절 이동 {x}R", {"be": x}) for x in (0.5, 1.0)] + [(f"시간 손절 {n}봉", {"time": n}) for n in (6, 12)]
 
 
 def trade_list(sym, tf, side):
     idx, o, h, l, c, atr, reg = arrays(sym, tf, side)
-    vol = frame(sym, tf).volume.to_numpy()
+    fr = frame(sym, tf)
+    vol = fr.volume.to_numpy()
+    apct = (fr.atr / fr.close).rolling(500, min_periods=100).rank(pct=True).fillna(0.5).to_numpy()
+    h4 = None
+    if tf != "4h":                                           # 4시간봉 50EMA 위/아래 (확정된 4시간봉만)
+        f4 = frame(sym, "4h")
+        sgn = np.sign(f4.close - f4.e50) * side
+        sgn.index = sgn.index + pd.Timedelta("4h") - pd.Timedelta(tf)
+        h4 = sgn.reindex(fr.index, method="ffill").fillna(0).to_numpy()
     n, hold = len(c), HOLD[tf] * 3
     out = []
     for s in setups(sym, tf, side):
@@ -74,9 +82,14 @@ def trade_list(sym, tf, side):
                         break_vol=vol[t] / max(vol[max(0, t - 20):t].mean(), 1e-12),
                         fvg_size=(s["top"] - s["bot"]) / a, stop_atr=(px - stop) / a,
                         retrace=(leg_hi - px) / max(leg_hi - lo, 1e-12), wait=e - s["start"],
-                        prior_drop=(c[t - 1] - c[max(0, t - 51)]) / a, htf=float(s["reg"]),
+                        prior_drop=(c[t - 1] - c[max(0, t - 51)]) / a, reg=float(s["reg"]),
                         ob_wick=(min(o[ob], c[ob]) - l[ob]) / (h[ob] - l[ob]) if h[ob] > l[ob] else 0.0,
-                        disp=abs(c[s["fi"] - 1] - o[s["fi"] - 1]) / a))
+                        disp=abs(c[s["fi"] - 1] - o[s["fi"] - 1]) / a,
+                        sweep=float(lo < l[max(0, ob - 60):max(1, ob - 2)].min()),       # 직전 저점을 쓸고 만든 바닥
+                        disc=(px - lo) / max(h[max(0, t - 60):t].max() - lo, 1e-12),   # 하락 파동 안에서 진입가 위치 (0=바닥)
+                        hour=idx[e].hour,
+                        htf=float(h4[t] > 0) if h4 is not None else float(s["reg"]),
+                        atr_pct=apct[t]))
     return out
 
 
@@ -161,7 +174,7 @@ def main():
     good_feats = []
     for f, name in FEATS.items():
         tr = base[~base.test]
-        if f == "htf":
+        if f == "reg":
             cut = pd.Series(np.where(base[f] > 0.5, "위", "아래"), index=base.index)
         else:
             q1, q2 = tr[f].quantile([1 / 3, 2 / 3])
