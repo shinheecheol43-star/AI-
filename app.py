@@ -11,6 +11,7 @@ import streamlit as st
 import analyzer as az
 import ad_report
 import fetcher
+import ocr
 import web_search
 import review_mining as rm
 import ui
@@ -46,6 +47,7 @@ st.session_state.setdefault("review_dates", [])
 st.session_state.setdefault("site_summary", [])
 st.session_state.setdefault("web_items", [])
 st.session_state.setdefault("web_query", "")
+st.session_state.setdefault("ing_image", "")
 st.session_state.setdefault("sampled_evenly", False)
 
 
@@ -94,7 +96,7 @@ def load_link():
                             found=_found_summary(result), review_total=result.get("review_total", 0),
                             review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False),
                             site_summary=result.get("site_summary", []), web_items=web_items, web_query=web_query,
-                            web_ing_src=web_ing_src)
+                            web_ing_src=web_ing_src, ing_image=result.get("ing_image", ""))
     st.session_state["found"] = _found_summary(result, web_items, web_ing_src)
 
 
@@ -106,7 +108,8 @@ def _found_summary(result, web_items=(), web_ing_src=""):
         how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
         where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
     mark = lambda ok: "있음" if ok else "없음"
-    ing_where = " (인터넷 검색에서 찾은 앞부분)" if web_ing_src else ""
+    ing_where = (" (상세 이미지에서 글자 인식으로 읽음)" if result.get("ing_image") else
+                 " (인터넷 검색에서 찾은 앞부분)" if web_ing_src else "")
     text = (f"링크에서 가져온 정보 — 광고 문구 {mark(result['ad'])} · 전성분 {n_ing}개{ing_where} · "
             f"쇼핑몰 리뷰 {n_rev}개{where}")
     if web_items:
@@ -118,9 +121,21 @@ def _found_summary(result, web_items=(), web_ing_src=""):
     return text
 
 
+def read_ingredient_capture():
+    up = st.session_state.get("ing_capture")
+    if not up:
+        return
+    text = ocr.read_upload(up.getvalue())
+    if text:
+        st.session_state.update(ingredients=text, ing_image="", notes=[
+            n for n in st.session_state["notes"] if not n.startswith("전성분을")])
+    else:
+        st.session_state["notes"] = st.session_state["notes"] + ["캡처에서 전성분을 읽지 못했어요. 성분표 부분만 크게 캡처해 주세요."]
+
+
 def load_sample(name):
     st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0,
-                            review_dates=[], sampled_evenly=False, site_summary=[], web_items=[], web_query="")
+                            review_dates=[], sampled_evenly=False, site_summary=[], web_items=[], web_query="", ing_image="")
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
@@ -142,6 +157,9 @@ with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직
     c1, c2, c3 = st.columns(3)
     c1.text_area("광고 문구 (인스타 캡션, 상세페이지 문구 등)", key="ad", height=200)
     c2.text_area("전성분", key="ingredients", height=200, placeholder="정제수, 글리세린, ...")
+    if ocr.available():
+        c2.file_uploader("또는 성분표 캡처 올리기", type=["png", "jpg", "jpeg", "webp"], key="ing_capture",
+                         on_change=read_ingredient_capture, help="성분표 부분만 캡처해서 올리면 글자를 읽어 위 칸에 채워요.")
     c3.text_area("실사용 리뷰 (한 줄에 하나씩)", key="reviews", height=200)
     clicked = st.button("분석하기", width="stretch")
 
@@ -259,6 +277,10 @@ with tab_review:
 with tab_ing:
     ui.section("내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
                f" · 피하는 성분: {', '.join(avoid) or '없음'}")
+    if ing_rows and st.session_state.get("ing_image", "").startswith(("http://", "https://")):
+        ui.show(f'<div class="muted">전성분이 상세페이지 <b>이미지</b>에만 있어서 글자 인식으로 읽었어요. '
+                f'일부 글자가 틀릴 수 있어요 · <a href="{ui.esc(st.session_state["ing_image"])}" target="_blank" '
+                f'rel="noopener">원본 이미지 보기</a></div>')
     if ing_rows:
         ui.section("내 피부와 성분 매칭 점수", "성분이 내 피부 타입·고민·피하고 싶은 성분과 얼마나 맞는지예요.")
         ui.match_breakdown(match, match_items, skin_type, concerns, avoid)

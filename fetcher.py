@@ -341,7 +341,16 @@ def _crema(url, product_no):
 
 def read_link(url, review_limit=400, progress=None):
     url = url.strip()
-    result = parse(fetch_html(url))
+    html = fetch_html(url)
+    result = parse(html)
+    result["ing_image"] = ""
+    if not result["ingredients"]:  # 성분표가 이미지로만 있으면 글자 인식으로 읽어 본다
+        import ocr
+        if ocr.available():
+            found, image_url = ocr.find_in_images(html, url)
+            if found:
+                result["ingredients"], result["ing_image"] = found, image_url
+                result["notes"] = [n for n in result["notes"] if not n.startswith("전성분을")]
     # 상품 페이지에서 찾은 글 중 평가가 없는 건 안내 문구일 가능성이 높아서 뺀다
     result["ad"] = clean_ad(result["ad"])
     page_reviews = result["reviews"].split("\n") if result["reviews"] else []
