@@ -8,7 +8,7 @@ import re
 INGREDIENTS = {
     "나이아신아마이드": {"alias": ["나이아신아마이드", "niacinamide"], "role": "미백·피지 조절",
                   "good": ["미백/잡티", "모공", "여드름/트러블"], "caution": []},
-    "히알루론산": {"alias": ["히알루론산", "소듐하이알루로네이트", "하이알루로닉애씨드", "hyaluronic"], "role": "수분 공급",
+    "히알루론산": {"alias": ["히알루론산", "소듐하이알루로네이트", "하이알루로닉애씨드", "hyaluronic", "hyaluronate"], "role": "수분 공급",
                "good": ["건조/보습", "건성"], "caution": []},
     "세라마이드": {"alias": ["세라마이드", "ceramide"], "role": "피부 장벽 강화",
               "good": ["건조/보습", "건성", "민감성", "진정/홍조"], "caution": []},
@@ -83,7 +83,7 @@ INGREDIENTS = {
     "판토텐산/비타민": {"alias": ["바이오틴", "biotin"], "role": "영양", "good": [], "caution": []},
     "다이프로필렌글라이콜": {"alias": ["다이프로필렌글라이콜", "dipropylene glycol"], "role": "보습·용매", "good": [], "caution": []},
     "글리세레스-26": {"alias": ["글리세레스-26", "glycereth-26"], "role": "보습·유화", "good": [], "caution": []},
-    "세테아릴알코올": {"alias": ["세테아릴알코올", "세틸알코올", "cetearyl", "cetyl alcohol"], "role": "지방 알코올(보습·유화)", "good": ["건성"], "caution": []},
+    "세테아릴알코올": {"alias": ["세테아릴알코올", "세틸알코올", "cetearyl alcohol", "cetyl alcohol"], "role": "지방 알코올(보습·유화)", "good": ["건성"], "caution": []},
     "에칠헥실글리세린": {"alias": ["에칠헥실글리세린", "에틸헥실글리세린", "ethylhexylglycerin"], "role": "보습·보존 보조", "good": [], "caution": []},
     "카프릴릴글라이콜": {"alias": ["카프릴릴글라이콜", "caprylyl glycol"], "role": "보습·보존 보조", "good": [], "caution": []},
     "소듐시트레이트": {"alias": ["소듐시트레이트", "시트릭애씨드", "citric"], "role": "pH 조절", "good": [], "caution": []},
@@ -148,10 +148,24 @@ def _amount_to_percent(amount):
     return {"%": v, "ppm": v / 10000, "ppb": v / 10000000}[m.group(2)]
 
 
+EXACT_EN = {"water", "aqua", "bha", "aha", "peg"}  # 이 영어 이름은 단어 전체가 같을 때만 ('Rose Water'는 정제수가 아님)
+
+
+def _en_hit(low, alias):
+    a = alias.lower()
+    if a in EXACT_EN:
+        return re.fullmatch(rf"{a}(\s*/\s*\w+)?", low) is not None or (a == "peg" and low.startswith("peg-"))
+    return a in low  # 'Hydrolyzed Hyaluronic Acid', 'Palmitoyl Tripeptide-1' 처럼 앞에 다른 말이 붙어도 찾기
+
+
 def _match(token):
     low = token.lower()
+    english = token.isascii()
     for name, info in INGREDIENTS.items():
-        if any(low.startswith(a.lower()) for a in info["alias"]):
+        if english:
+            if any(a.isascii() and _en_hit(low, a) for a in info["alias"]):
+                return name, info
+        elif any(low.startswith(a.lower()) for a in info["alias"]):
             return name, info
     return None, None
 

@@ -118,11 +118,14 @@ def _find_ingredients_in_table(soup):
 
 def _find_ingredients(lines):
     """'전성분' 다음에 오는 글, 또는 정제수·글리세린이 들어간 쉼표 많은 줄을 성분표로 본다."""
-    for i, line in enumerate(lines):
-        if "전성분" in line or "모든 성분" in line or "ingredients" in line.lower():
-            after = re.split(r"전성분|모든 성분|ingredients", line, flags=re.I)[-1].strip(" :：")
-            candidates = [after] + lines[i + 1:i + 4]
-            for c in candidates:
+    # 1순위: '전성분/FULL INGREDIENTS', 2순위: 그냥 'ingredients' ('Key Ingredients' 같은 주요 성분 소개는 빼고)
+    for label in (r"전\s*성분|모든 성분|full\s+ingredients?|ingredients?\s*list", r"(?<!key )ingredients"):
+        for i, line in enumerate(lines):
+            if not re.search(label, line, re.I) or re.search(r"key\s+ingredients?|주요\s*성분", line, re.I) and \
+                    not re.search(r"전\s*성분|full", line, re.I):
+                continue
+            after = re.split(label, line, flags=re.I)[-1].strip(" :：")
+            for c in [after] + lines[i + 1:i + 4]:
                 if c.count(",") >= 4:
                     return c
     best = ""
@@ -134,7 +137,8 @@ def _find_ingredients(lines):
 
 
 REVIEW_JUNK = re.compile(r"^(포토|동영상|전체|베스트|최신|추천)?\s*(리뷰|후기|상품평|구매평)\s*(\(?[\d,]+|쓰기|작성|더보기|전체|보기|순)|"
-                         r"^[\d,.\s★☆점%()/]+$|로그인|장바구니|구매하기|배송|도움이 돼요|신고|평점")
+                         r"^[\d,.\s★☆점%()/]+$|로그인|장바구니|구매하기|배송|도움이 돼요|신고|평점|"
+                         r"교환\s*및\s*반품|반품\s*및\s*환불|전자상거래|청약\s*철회")
 
 
 def _looks_like_review(text):
@@ -202,10 +206,34 @@ def clean_title(title):
         kept.append(part)
     title = "/".join(kept)
     title = re.sub(r"\s*(이벤트\s*혜택|이벤트|혜택가|특가|기획전?)\s*$", "", title)
+    title = re.sub(r"\s+\S*(세일|SALE)\b.*$", "", title, flags=re.I)  # '제품명 슈퍼빅세일 BOX(130mL)'
+
     t = re.sub(r"\[[^\]]*\]|【[^】]*】", " ", title)
     t = re.sub(r"\s*[_|]\s*\d.*원.*$", "", t)
     t = re.sub(r"\s*\|.*$", "", t)  # '제품명 | 쇼핑몰 이름'
-    return re.sub(r"\s+", " ", t).strip() or title.strip()
+    t = re.sub(r"\s+", " ", t).strip() or title.strip()
+    words = t.split()
+    half = len(words) // 2
+    if half and len(words) % 2 == 0 and words[:half] == words[half:]:  # '제품명 100ML 제품명 100ML'
+        t = " ".join(words[:half])
+    return t
+
+
+SCRIPT_ING = re.compile(r'(?:모든\s*성분|전\s*성분|full\s*ingredients?)[^"]{0,40}"\s*[,:]\s*"((?:[^"\\]|\\.){30,5000})"', re.I)
+
+
+def _ingredients_in_scripts(raw):
+    """화면이 자바스크립트로 그려지는 쇼핑몰은 성분표가 페이지 속 데이터(JSON)에만 있다."""
+    for m in SCRIPT_ING.finditer(raw):
+        try:
+            value = json.loads(f'"{m.group(1)}"')
+        except ValueError:
+            value = m.group(1)
+        value = re.sub(r"<[^>]+>", " ", html.unescape(value)).replace("*", "")
+        value = re.sub(r"\s+", " ", value).strip()
+        if value.count(",") >= 4:
+            return value
+    return ""
 
 
 def parse(html):
@@ -221,7 +249,7 @@ def parse(html):
     lines = _lines(soup)
     reviews = list(dict.fromkeys([r for r in ld["reviews"] if len(r) >= 5] + _find_reviews(soup)))[:50]
     review_set = set(reviews)
-    ingredients = table_ingredients or _find_ingredients(lines)
+    ingredients = table_ingredients or _find_ingredients(lines) or _ingredients_in_scripts(html)
 
     title = ld["name"] or _meta(soup, "og:title") or (soup.title.get_text(strip=True) if soup.title else "")
     description = ld["description"] or _meta(soup, "og:description", "description")
@@ -355,6 +383,122 @@ def _cafe24_board(url, product_no, limit=400, progress=None):
     return out, max(total, len(out))
 
 
+# ---- 고도몰(NHN커머스) 쇼핑몰: 상품 화면이 불러오는 '상품후기' 게시판 목록을 똑같이 연다 ----
+def _godomall_goods_no(url):
+    q = parse_qs(urlparse(url).query)
+    return q["goodsNo"][0] if "goodsNo" in q and "goods_view" in url else None
+
+
+def _godomall_list_page(args):
+    base, goods_no, page = args
+    try:
+        html = fetch_html(f"{base}/goods/goods_board_list.php?bdId=goodsreview&goodsNo={goods_no}&gboard=y&page={page}", timeout=10)
+    except FetchError:
+        return [], 1
+    soup = BeautifulSoup(html, "html.parser")
+    items = []
+    for tr in soup.select("tr.js_data_row"):
+        if tr.get("data-notice") == "y":
+            continue
+        title = re.sub(r"\s+", " ", (tr.select_one(".board_tit") or tr).get_text(" ", strip=True))
+        m = re.search(r"(\d{4})[.-](\d{2})[.-](\d{2})", tr.get_text(" "))
+        items.append((title, f"{base}/board/view.php?bdId=goodsreview&sno={tr.get('data-sno')}",
+                      "-".join(m.groups()) if m else ""))
+    pages = [int(a.get_text(strip=True)) for a in soup.select(".pagination a, .pagination strong, .paging a")
+             if a.get_text(strip=True).isdigit()]
+    last = soup.select_one(".pagination .btn_page_last a, a.btn_page_last, .last a")
+    if last and last.get("href"):
+        m = re.search(r"page=(\d+)", last["href"])
+        if m:
+            pages.append(int(m.group(1)))
+    return items, max(pages or [1])
+
+
+def _godomall_article(item):
+    title, link = item
+    try:
+        page = BeautifulSoup(fetch_html(link, timeout=6), "html.parser")
+    except FetchError:
+        return title
+    box = page.select_one(".board_view_content") or page.select_one(".seem_cont")
+    if not box:
+        return title
+    body = re.sub(r"\s+", " ", box.get_text(" ", strip=True))
+    body = re.sub(r"^.{0,120}?판매\s*금액\s*\S+\s*", "", body)  # 맨 앞의 상품 이름·가격 칸
+    return NAVERPAY_NOTE.sub("", body).strip() or title
+
+
+def _godomall_board(url, goods_no, limit=400, progress=None):
+    """고도몰 상품후기 게시판에서 전체 기간에 걸쳐 고르게 limit개 읽는다. 반환 형식은 _cafe24_board 와 같다."""
+    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+    first, n_pages = _godomall_list_page((base, goods_no, 1))
+    if not first:
+        return [], 0
+    per_page = len(first)
+    pages = _spread_pages(n_pages, max(1, -(-limit // per_page)))
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        listed = list(pool.map(_godomall_list_page, [(base, goods_no, p) for p in pages if p != 1]))
+    rows = first + [r for items, _ in listed for r in items]
+    picked = list({link: (t, link, d) for t, link, d in rows}.values())[:limit]
+    results = [None] * len(picked)
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(_godomall_article, (t, l)): i for i, (t, l, _) in enumerate(picked)}
+        for done, fut in enumerate(as_completed(futures), start=1):
+            results[futures[fut]] = fut.result()
+            if progress and done % 10 == 0:
+                progress(done, len(picked))
+    out = [{"text": t[:300], "date": d} for t, (_, _, d) in zip(results, picked) if t and len(t) >= 2]
+    total = per_page * (n_pages - 1) + (len(listed[-1][0]) if listed and pages[-1] == n_pages else per_page) if n_pages > 1 else len(first)
+    return out, max(total, len(out))
+
+
+def _godomall_plus_page(args):
+    """고도몰 '플러스리뷰' 목록 한 쪽 (본문이 목록에 다 들어 있음)"""
+    base, goods_no, page = args
+    try:
+        html = fetch_html(f"{base}/board/plus_review_list.php?goodsNo={goods_no}&page={page}&activeSno=&sort=", timeout=10)
+    except FetchError:
+        return [], 1
+    soup = BeautifulSoup(html, "html.parser")
+    items = []
+    for row in soup.select(".js_pr_row"):
+        box = row.select_one(".js_pr_contents_desc") or row.select_one(".js_pr_contents_short") or row.select_one(".review_text")
+        if not box:
+            continue
+        for junk in box.select("style, a, script"):
+            junk.decompose()
+        text = re.sub(r"\s+", " ", box.get_text(" ", strip=True)).strip()
+        m = re.search(r"(\d{4})[.-](\d{2})[.-](\d{2})", (row.select_one(".star_day_name") or row).get_text(" "))
+        if text:
+            items.append({"text": text[:300], "date": "-".join(m.groups()) if m else "", "sno": row.get("data-sno")})
+    pages = [int(n) for n in re.findall(r"page=(\d+)", html)] + [page]
+    return items, max(pages)
+
+
+def _godomall_plus(url, goods_no, limit=400, progress=None):
+    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+    first, n_pages = _godomall_plus_page((base, goods_no, 1))
+    if not first:
+        return [], 0
+    # 쪽 번호가 10개씩만 보이는 경우가 있어서, 보이는 마지막 쪽을 열어 더 뒤가 있는지 확인
+    for _ in range(30):
+        _, more = _godomall_plus_page((base, goods_no, n_pages))
+        if more <= n_pages:
+            break
+        n_pages = more
+    per_page = len(first)
+    pages = _spread_pages(n_pages, max(1, -(-limit // per_page)))
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        listed = list(pool.map(_godomall_plus_page, [(base, goods_no, p) for p in pages if p != 1]))
+    if progress:
+        progress(1, 1)
+    rows = first + [r for items, _ in listed for r in items]
+    out = list({r["sno"] or r["text"]: r for r in rows}.values())[:limit]
+    last = listed[-1][0] if listed and pages[-1] == n_pages else first
+    total = per_page * (n_pages - 1) + len(last) if n_pages > 1 else len(first)
+    return out, max(total, len(out))
+
+
 def _crema(url, product_no):
     """CREMA(크리마) 리뷰 서비스를 쓰는 쇼핑몰의 리뷰 화면을 읽는다."""
     host = urlparse(url).netloc
@@ -388,6 +532,17 @@ def read_link(url, review_limit=400, progress=None):
                 extra += got
                 sources.append("리뷰 창")
         product_no = _product_no(url)
+        goods_no = _godomall_goods_no(url)
+        if goods_no and not extra:
+            items, total = _godomall_plus(url, goods_no, review_limit, progress)
+            if len(items) < 10:  # 플러스리뷰가 적으면 일반 상품후기 게시판도 본다
+                more, more_total = _godomall_board(url, goods_no, review_limit, progress)
+                if len(more) > len(items):
+                    items, total = more, more_total
+            if items:
+                extra += [it["text"] for it in items]
+                dated = items
+                sources.append("상품 후기 게시판")
         if product_no and not extra:
             items, total = _cafe24_board(url, product_no, review_limit, progress)
             if items:
@@ -407,6 +562,8 @@ def read_link(url, review_limit=400, progress=None):
         result["notes"].append(f"이 쇼핑몰은 리뷰를 외부 리뷰 서비스({service})에 모아 두어서 링크로는 "
                                f"{'리뷰를 읽을 수 없어요' if not reviews else f'리뷰를 {len(reviews)}개밖에 읽지 못했어요'}. "
                                "쇼핑몰 리뷰 화면에서 리뷰를 복사해 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣으면 제대로 분석할 수 있어요.")
+    elif not reviews and re.search(r"(상품\s*후기|리뷰|REVIEW)\s*\(\s*0\s*\)", html, re.I):
+        result["notes"].append("이 상품은 쇼핑몰에 아직 등록된 리뷰가 없어요(리뷰 0개). 블로그·카페 후기로 대신 분석해요.")
     elif not reviews:
         result["notes"].append("리뷰를 찾지 못했어요. 이 사이트는 리뷰를 화면에서 따로 불러오는 방식이에요. "
                                "리뷰 글을 복사해서 ‘직접 붙여넣기 → 실사용 리뷰’ 칸에 넣어 주세요.")

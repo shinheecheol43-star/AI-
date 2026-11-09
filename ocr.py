@@ -37,6 +37,8 @@ FIXES = [
     (r"꿀품", "꿀풀"), (r"([가-힣])(익|위|임)추출물", r"\1잎추출물"), (r"(껄|낄|겁질|껍칠)추출물", "껍질추출물"),
     (r"야풍년화", "아풍년화"), (r"/2?10-30", "/C10-30"), (r"^l", "1"), (r"소튬", "소듐"), (r"글리세런", "글리세린"),
     (r"정재수", "정제수"), (r"정제 수", "정제수"), (r"밥질추출물", "밤껍질추출물"),
+    (r"에[칠틸]렉실", "에칠헥실"), (r"헤노에이트", "헥사노에이트"), (r"나무질추출물", "나무껍질추출물"),
+    (r"\([^)]*[ㄱ-ㅎㅏ-ㅣ][^)]*\)", ""),  # '(101.860ㅁㅁ0)'처럼 괄호 안이 깨진 글자
 ]
 
 
@@ -53,10 +55,15 @@ def available():
 def image_urls(html, base_url):
     """상세 설명 영역의 이미지 주소 (나중에 불러오는 이미지도 포함)"""
     soup = BeautifulSoup(html, "html.parser")
-    area = soup.find(id="prdDetail") or soup.find(class_=re.compile(r"edibot-product-detail|detail|cont", re.I)) or soup
+    # 카페24: prdDetail / edibot, 고도몰: detail_explain_box, 그 밖: detail·cont 가 들어간 영역
+    area = (soup.find(id="prdDetail") or soup.find(class_=re.compile(r"edibot-product-detail|detail_explain|goods_description|txt-manual", re.I))
+            or soup.find(class_=re.compile(r"detail|cont", re.I)) or soup)
+    if len(area.find_all("img")) < 2:
+        area = soup
     urls = []
     for img in area.find_all("img"):
-        src = img.get("ec-data-src") or img.get("data-src") or img.get("data-original") or img.get("src") or ""
+        src = (img.get("ec-data-src") or img.get("data-src") or img.get("data-original") or img.get("data-lazy")
+               or img.get("data-lazy-src") or img.get("src") or "")
         if not src or src.startswith("data:") or re.search(r"icon|btn|logo|banner_top|blank|spacer", src, re.I):
             continue
         u = urljoin(base_url, src)
