@@ -150,7 +150,7 @@ if st.session_state["found"]:
 for note in st.session_state["notes"]:
     st.warning(note)
 
-with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직접 붙여넣기", expanded=not st.session_state["auto_run"]):
+with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직접 붙여넣기", expanded=False):
     cols = st.columns(len(SAMPLES))
     for col, name in zip(cols, SAMPLES):
         col.button(name, on_click=load_sample, args=(name,), width="stretch")
@@ -164,6 +164,8 @@ with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직
     clicked = st.button("분석하기", width="stretch")
 
 if not (clicked or st.session_state["auto_run"]):
+    ui.intro_band()
+    ui.footer()
     st.stop()
 
 ad_text, ing_text, rev_text = st.session_state["ad"], st.session_state["ingredients"], st.session_state["reviews"]
@@ -334,4 +336,4 @@ with tab_ad:
     ui.section("광고를 언급한 실제 리뷰", "‘광고’, ‘인스타’, ‘상세페이지’ 등을 언급한 리뷰예요.")
     ui.ad_mentions(rep["ad_mentions"])
 
-st.caption("※ 이 분석은 참고용이에요. 피부 반응은 개인차가 있으니 패치 테스트를 권장해요.")
+ui.footer()
