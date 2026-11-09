@@ -170,14 +170,26 @@ def clean_ingredients(segment):
 
 
 def _priority(item):
-    """글자가 많은 이미지(흰 바탕에 글씨 → 같은 크기면 파일이 작음)와 뒤쪽 이미지를 먼저 읽는다."""
+    """글자가 많은 이미지(흰 바탕에 글씨 → 같은 크기면 파일이 작음)와 뒤쪽 이미지를 먼저 읽는다.
+    아주 긴 홍보 이미지(세로 6000px 이상)는 성분표일 가능성이 낮아 마지막에 읽는다."""
     idx, (url, data, size) = item
     w, h = size
     density = len(data) / max(w * h, 1)
-    return (density > 0.6, density, -idx)
+    return (h > 6000, density > 0.6, density, -idx)
 
 
-def find_in_images(html, base_url, budget=50, max_images=60):
+def _quick(image):
+    """'전성분'이 있는지만 빠르게 확인 (원래 크기로 읽음)"""
+    import pytesseract
+    from PIL import ImageOps
+    gray = ImageOps.autocontrast(image.convert("L"))
+    texts = []
+    for top, bottom in _cuts(gray, size=4000):
+        texts.append(pytesseract.image_to_string(gray.crop((0, top, gray.width, bottom)), lang="kor", config="--psm 6"))
+    return "\n".join(texts)
+
+
+def find_in_images(html, base_url, budget=70, max_images=60):
     """상세 이미지에서 전성분을 찾는다. 반환: (전성분 글, 그 이미지 주소) 또는 ("", "")"""
     if not available():
         return "", ""
@@ -208,7 +220,10 @@ def find_in_images(html, base_url, budget=50, max_images=60):
     for i, (u, _, _) in order:
         if time.time() - start > budget:
             break
-        text = read(i)
+        quick = _quick(images[i])  # 1단계: 빠르게 훑어서 성분표 이미지 찾기
+        if not (START.search(quick) or "정제수" in quick or re.search(r"[가-힣]+(추출물|글라이콜|다이올)", quick)):
+            continue
+        text = read(i)              # 2단계: 찾은 이미지만 크게 키워서 정확하게 읽기
         if START.search(text) or text.count("정제수"):
             # 성분표가 이미지 두 장에 걸쳐 있을 수 있어서, 앞뒤 이미지도 이어서 읽는다
             if not START.search(text) and i - 1 in images:

@@ -35,10 +35,15 @@ class FetchError(Exception):
 def fetch_html(url, timeout=10):
     if not re.match(r"^https?://", url):
         url = "https://" + url
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=timeout)
-    except requests.RequestException as e:
-        raise FetchError(f"사이트에 접속하지 못했어요. ({type(e).__name__})") from e
+    for attempt in range(2):  # 사이트가 잠깐 느릴 때를 위해 한 번 더 시도
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=timeout + 5 * attempt)
+            break
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt == 1:
+                raise FetchError(f"사이트에 접속하지 못했어요. ({type(e).__name__})") from e
+        except requests.RequestException as e:
+            raise FetchError(f"사이트에 접속하지 못했어요. ({type(e).__name__})") from e
     if res.status_code != 200:
         raise FetchError(f"사이트가 접속을 거절했어요. (응답 코드 {res.status_code}) "
                          "자동 접속을 막는 사이트일 수 있어요.")
