@@ -8,102 +8,115 @@ import re
 
 import streamlit as st
 
-GOOD, GOOD_BG = "#1F9D6B", "#E8F7EF"
-BAD, BAD_BG = "#D64545", "#FDECEC"
-WARN, WARN_BG = "#B7791F", "#FFF5DC"
-ROSE = "#E5537A"
+# 매거진 스타일: 종이색 배경 + 검정 글씨 + 포인트 색 하나(테라코타). 좋음/나쁨/주의는 채도를 낮춘 색
+INK, PAPER, LINE, GRAY = "#141414", "#FAF9F6", "#E3E0D8", "#6E6A63"
+GOOD, GOOD_BG = "#2E6B4F", "#EEF3EE"
+BAD, BAD_BG = "#A8322D", "#F7ECE9"
+WARN, WARN_BG = "#8C6A1C", "#F5F0E2"
+ROSE = "#B4402A"
 
 CSS = """
 <style>
-:root, html, body { color-scheme: only light !important; }
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap');
+:root, html, body { color-scheme: only light !important; }
 html, body, [class*="css"], .stApp, .stMarkdown, button, input, textarea, select {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif !important;
 }
-.block-container { padding-top: 3.2rem; max-width: 1100px; }
-h1, h2, h3 { letter-spacing: -0.02em; }
+.stApp { background: #FAF9F6; }
+.block-container { padding-top: 2.6rem; max-width: 1040px; counter-reset: sec; }
+.serif, .masthead h1, .section-title, .product, .big-num, .verdict, .ing-num { font-family: 'Noto Serif KR', serif !important; }
 
-.hero {
-  background: linear-gradient(135deg, #FF8FA3 0%, #FFB199 55%, #FFD6A5 100%);
-  border-radius: 24px; padding: 34px 32px; color: #fff; margin-bottom: 22px;
-  box-shadow: 0 10px 30px rgba(229, 83, 122, 0.25);
-}
-.hero h1 { color: #fff; font-size: clamp(1.7rem, 5vw, 2.3rem); font-weight: 800; margin: 0 0 6px 0; padding: 0; }
-.hero p { color: #fff; opacity: .95; font-size: 1.05rem; margin: 0 0 14px 0; }
-.pill { display: inline-block; background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.5);
-  border-radius: 999px; padding: 4px 12px; margin: 0 6px 6px 0; font-size: .85rem; font-weight: 600; }
+/* 마스트헤드 */
+.masthead { border-top: 3px solid #141414; border-bottom: 1px solid #141414; padding: 18px 0 20px 0; margin-bottom: 26px; }
+.masthead .kicker { font-size: .72rem; letter-spacing: .22em; font-weight: 700; color: #6E6A63; display: flex; justify-content: space-between; }
+.masthead h1 { font-size: clamp(2.2rem, 7vw, 3.6rem); font-weight: 900; letter-spacing: -0.04em; margin: 10px 0 8px 0; padding: 0; color: #141414; line-height: 1.1; }
+.masthead h1 em { font-style: normal; color: #B4402A; }
+.masthead p { font-size: 1.02rem; color: #3A3733; margin: 0; max-width: 640px; line-height: 1.7; }
 
-.card { background: #fff; border: 1px solid #F3E1E5; border-radius: 18px; padding: 18px 20px;
-  box-shadow: 0 4px 14px rgba(45, 27, 46, 0.05); margin-bottom: 14px; }
-.section-title { font-size: 1.25rem; font-weight: 800; margin: 18px 0 10px 0; }
-.muted { color: #8A7A84; font-size: .9rem; }
+/* 기본 요소 */
+.card { background: #FFFFFF; border: 1px solid #E3E0D8; border-radius: 2px; padding: 18px 20px; margin-bottom: 14px; }
+.section-title { font-size: 1.45rem; font-weight: 700; margin: 34px 0 6px 0; padding-top: 14px; border-top: 1px solid #141414;
+  letter-spacing: -0.02em; color: #141414; }
+.section-title::before { counter-increment: sec; content: counter(sec, decimal-leading-zero); display: block;
+  font-family: 'Pretendard', sans-serif; font-size: .72rem; letter-spacing: .2em; color: #B4402A; font-weight: 800; margin-bottom: 4px; }
+.muted { color: #6E6A63; font-size: .88rem; line-height: 1.6; }
 
-.product { font-size: 1.35rem; font-weight: 800; margin: 6px 0 14px 0; line-height: 1.4; }
-.product small { display: block; font-size: .8rem; font-weight: 600; color: #E5537A; letter-spacing: .04em; }
+.product { font-size: 1.7rem; font-weight: 900; margin: 6px 0 18px 0; line-height: 1.3; letter-spacing: -0.03em; }
+.product small { display: block; font-family: 'Pretendard', sans-serif; font-size: .7rem; font-weight: 800; color: #B4402A; letter-spacing: .22em; margin-bottom: 6px; }
 
-.score { text-align: center; }
-.ring { width: 118px; height: 118px; border-radius: 50%; margin: 4px auto 10px auto;
-  display: flex; align-items: center; justify-content: center; }
-.ring-inner { width: 92px; height: 92px; border-radius: 50%; background: #fff;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-num { font-size: 1.8rem; font-weight: 800; line-height: 1; }
-.ring-unit { font-size: .75rem; color: #8A7A84; margin-top: 2px; }
-.score-label { font-weight: 700; }
-.score-desc { font-size: .82rem; color: #8A7A84; margin-top: 2px; }
+/* 점수: 큰 숫자 + 얇은 막대 */
+.score { border: none; border-top: 2px solid #141414; background: transparent; padding: 12px 2px 6px 2px; }
+.score-label { font-size: .8rem; letter-spacing: .02em; font-weight: 800; color: #6E6A63; }
+.big-num { font-size: 3.4rem; font-weight: 900; line-height: 1; margin: 8px 0 4px 0; letter-spacing: -0.04em; }
+.big-num small { font-size: 1.1rem; font-weight: 700; margin-left: 2px; }
+.thin-bar { height: 3px; background: #E3E0D8; margin: 8px 0 8px 0; }
+.thin-bar div { height: 3px; }
+.score-desc { font-size: .8rem; color: #6E6A63; line-height: 1.5; }
 
-.verdict { border-radius: 18px; padding: 18px 22px; font-size: 1.08rem; font-weight: 700;
-  margin: 4px 0 16px 0; }
-.comment { line-height: 1.85; font-size: 1.02rem; }
-.comment b { color: #C2335C; }
+.verdict { padding: 16px 0 16px 18px; font-size: 1.2rem; font-weight: 700; margin: 6px 0 10px 0;
+  border-left: 4px solid #141414; background: transparent; letter-spacing: -0.02em; line-height: 1.6; }
+.comment { line-height: 1.9; font-size: 1.04rem; border: none; border-left: 2px solid #141414; padding: 4px 0 4px 18px; background: transparent; }
+.comment b { color: #141414; background: linear-gradient(transparent 62%, #F1D9CF 62%); }
 
-.quote { border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
-.quote .head { font-weight: 800; margin-bottom: 6px; }
-.quote .head span { font-weight: 600; font-size: .85rem; opacity: .8; margin-left: 4px; }
-.quote .body { font-size: .93rem; color: #4A3B47; }
+.quote { padding: 12px 0 12px 14px; margin-bottom: 8px; border-radius: 0; background: transparent !important; }
+.quote .head { font-weight: 800; margin-bottom: 4px; font-size: .95rem; }
+.quote .head span { font-weight: 600; font-size: .8rem; color: #6E6A63; margin-left: 6px; }
+.quote .body { font-size: .95rem; color: #2A2723; line-height: 1.6; }
 
-.chip { display: inline-block; border-radius: 999px; padding: 6px 12px; margin: 0 6px 8px 0;
-  font-size: .88rem; font-weight: 600; }
+.chip { display: inline-block; border-radius: 2px; padding: 4px 10px; margin: 0 6px 8px 0; font-size: .84rem; font-weight: 600;
+  border: 1px solid currentColor; background: transparent !important; }
 .chip small { font-weight: 500; opacity: .8; margin-left: 4px; }
 
-.bar-row { display: flex; align-items: center; margin: 8px 0; }
-.bar-label { width: 86px; font-weight: 600; font-size: .9rem; flex-shrink: 0; }
-.bar-track { flex: 1; display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: #F5EDEF; }
-.bar-num { width: 64px; text-align: right; font-size: .82rem; color: #8A7A84; flex-shrink: 0; }
+.bar-row { display: flex; align-items: center; margin: 9px 0; gap: 10px; }
+.bar-label { width: 90px; font-weight: 600; font-size: .88rem; flex-shrink: 0; }
+.bar-track { flex: 1; display: flex; height: 8px; border-radius: 0; overflow: hidden; background: #ECE9E2; }
+.bar-num { width: 70px; text-align: right; font-size: .8rem; color: #6E6A63; flex-shrink: 0; }
 
-.claim { display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  border-bottom: 1px dashed #F0DDE2; padding: 10px 2px; }
+.claim { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #ECE9E2; padding: 11px 0; }
 .claim:last-child { border-bottom: none; }
-.badge { border-radius: 999px; padding: 4px 10px; font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.badge { border-radius: 2px; padding: 3px 8px; font-size: .76rem; font-weight: 800; white-space: nowrap; letter-spacing: .02em;
+  border: 1px solid currentColor; background: transparent !important; }
 
-button[data-baseweb="tab"] p { font-size: 1.05rem !important; font-weight: 700; }
-button[data-baseweb="tab"] { padding: 10px 14px; }
-section[data-testid="stSidebar"] h2 { font-weight: 800; }
-.stButton > button { border-radius: 12px; font-weight: 700; }
-.stTextInput input { border-radius: 12px; }
+/* 탭·버튼·입력 */
+button[data-baseweb="tab"] p { font-size: 1rem !important; font-weight: 700; letter-spacing: -0.01em; }
+button[data-baseweb="tab"] { padding: 10px 16px 10px 0; }
+div[data-baseweb="tab-highlight"] { background-color: #141414 !important; height: 2px !important; }
+.stButton > button { border-radius: 0; font-weight: 700; letter-spacing: .02em; }
+.stButton > button[kind="primary"] { background: #141414; border-color: #141414; color: #fff; }
+.stButton > button[kind="primary"]:hover { background: #B4402A; border-color: #B4402A; }
+.stTextInput input, div[data-baseweb="select"] > div, .stTextArea textarea { border-radius: 0 !important; }
+div[data-testid="stExpander"] details, div[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 0 !important; }
 footer { visibility: hidden; }
-.ing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
-.ing-box { background: #FFF8F6; border: 1px solid #F3E1E5; border-radius: 14px; padding: 12px 14px; }
-.ing-box-title { font-weight: 800; font-size: .9rem; margin-bottom: 8px; }
-.ing-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px dashed #F0DDE2; }
+/* 안내 상자 (st.info / st.warning) */
+div[data-testid="stAlert"] { border-radius: 0 !important; background: transparent !important; border: none !important;
+  border-left: 3px solid #141414 !important; padding: 2px 0 2px 4px !important; }
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] div { color: #2A2723 !important; font-size: .92rem; }
+div[data-testid="stAlert"] svg { display: none; }
+div[data-testid="stAlertContainer"] { background: transparent !important; }
+div[data-testid="stNotification"][data-baseweb="notification"] { background: transparent !important; }
+
+/* 성분 */
+.ing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0; border-top: 1px solid #E3E0D8; border-left: 1px solid #E3E0D8; }
+.ing-box { background: transparent; border-right: 1px solid #E3E0D8; border-bottom: 1px solid #E3E0D8; padding: 14px 14px; }
+.ing-box-title { font-weight: 800; font-size: .8rem; letter-spacing: .02em; color: #6E6A63; margin-bottom: 10px; }
+.ing-row { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid #ECE9E2; }
 .ing-row:last-child { border-bottom: none; }
-.ing-num { width: 28px; height: 28px; border-radius: 50%; background: #FFE8EE; color: #E5537A; font-weight: 800;
-  font-size: .85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ing-num { width: 30px; font-size: 1.15rem; font-weight: 900; color: #B4402A; flex-shrink: 0; text-align: right; }
 .ing-main { flex: 1; min-width: 0; }
-.ing-desc { font-size: .88rem; color: #6B5E68; margin-top: 3px; }
-.ad-quote { background: #FFF5F7; border: 1px dashed #F2B8C6; border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-weight: 600; }
-.mini-quote { border-left: 4px solid; background: #FFFBFA; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: .9rem; color: #4A3B47; }
-.one-pct { text-align: center; color: #B7791F; background: #FFF5DC; border-radius: 10px; padding: 6px; margin: 8px 0; font-size: .85rem; }
-.mini { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: .72rem; font-weight: 700; margin-left: 4px; }
+.ing-desc { font-size: .86rem; color: #5A5650; margin-top: 3px; line-height: 1.55; }
+.ad-quote { border-left: 2px solid #B4402A; padding: 6px 0 6px 12px; margin: 10px 0; font-weight: 600; font-family: 'Noto Serif KR', serif; }
+.mini-quote { border-left: 2px solid; padding: 6px 0 6px 12px; margin-top: 8px; font-size: .9rem; color: #2A2723; line-height: 1.6; }
+.one-pct { text-align: center; color: #8C6A1C; border-top: 1px dashed #8C6A1C; border-bottom: 1px dashed #8C6A1C; padding: 6px; margin: 10px 0; font-size: .82rem; }
+.mini { display: inline-block; border-radius: 0; padding: 0 6px; font-size: .7rem; font-weight: 800; margin-left: 4px; letter-spacing: .02em; }
+a { color: #B4402A !important; }
+
 @media (max-width: 640px) {
-  .block-container { padding-top: 2.6rem; }
-  .hero { padding: 24px 20px; border-radius: 20px; }
-  .card.score { display: flex; align-items: center; gap: 16px; text-align: left; padding: 14px 16px; }
-  .ring { width: 84px; height: 84px; margin: 0; flex-shrink: 0; }
-  .ring-inner { width: 64px; height: 64px; }
-  .ring-num { font-size: 1.4rem; }
-  .bar-label { width: 70px; }
+  .block-container { padding-top: 2rem; }
+  .big-num { font-size: 2.8rem; }
+  .bar-label { width: 72px; }
   .ing-row { flex-wrap: wrap; }
-  .ing-row .badge { margin-left: 40px; }
+  .ing-row .badge { margin-left: 44px; }
 }
 </style>
 """
@@ -118,8 +131,16 @@ def md_bold(text):
     return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", esc(text))
 
 
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]+\\s?")
+
+
+def plain(text):
+    """이모지를 뺀 글자 (매거진 스타일에서는 화면에 이모지를 쓰지 않음)"""
+    return EMOJI.sub("", str(text))
+
+
 def show(markup):
-    st.markdown(markup, unsafe_allow_html=True)
+    st.markdown(plain(markup), unsafe_allow_html=True)
 
 
 def inject_css():
@@ -127,10 +148,10 @@ def inject_css():
 
 
 def hero():
-    show('<div class="hero"><h1>🔍 광고 말고 진짜</h1>'
-         '<p>광고에서 본 화장품, 링크만 넣으면 <b>내 피부 기준</b>으로 성분·광고·실사용 리뷰를 한눈에 분석해 드려요.</p>'
-         '<span class="pill">💸 완전 무료</span><span class="pill">👤 내 피부 맞춤</span>'
-         '<span class="pill">🔎 광고 vs 실제 리뷰</span></div>')
+    show('<div class="masthead"><div class="kicker"><span>CONSUMER REPORT</span><span>COSMETICS · AD CHECK</span></div>'
+         '<h1>광고 말고, <em>진짜.</em></h1>'
+         '<p>광고에서 본 화장품의 링크를 넣으면, 성분과 광고 문구와 실제 사용자 리뷰를 '
+         '내 피부를 기준으로 하나의 리포트로 정리합니다.</p></div>')
 
 
 def section(title, desc=""):
@@ -140,7 +161,7 @@ def section(title, desc=""):
 
 def product_title(title):
     if title:
-        show(f'<div class="product"><small>ANALYSIS REPORT</small>{esc(title)}</div>')
+        show(f'<div class="product"><small>THE REPORT</small>{esc(title)}</div>')
 
 
 def _tone(value):
@@ -153,10 +174,10 @@ def _tone(value):
 
 def score_card(label, value, unit, desc):
     color = _tone(value)
-    show(f'<div class="card score"><div class="ring" style="background: conic-gradient({color} {value * 3.6}deg, #F5EDEF 0deg);">'
-         f'<div class="ring-inner"><div class="ring-num" style="color:{color}">{value}</div>'
-         f'<div class="ring-unit">{esc(unit)}</div></div></div>'
-         f'<div><div class="score-label">{esc(label)}</div><div class="score-desc">{esc(desc)}</div></div></div>')
+    show(f'<div class="card score"><div class="score-label">{esc(label)}</div>'
+         f'<div class="big-num" style="color:{color}">{value}<small>{esc(unit)}</small></div>'
+         f'<div class="thin-bar"><div style="width:{value}%; background:{color}"></div></div>'
+         f'<div class="score-desc">{esc(desc)}</div></div>')
 
 
 def verdict(text, fit, trust):
@@ -166,7 +187,7 @@ def verdict(text, fit, trust):
         color, bg = WARN, WARN_BG
     else:
         color, bg = BAD, BAD_BG
-    show(f'<div class="verdict" style="background:{bg}; color:{color}; border:1px solid {color}33;">{esc(text)}</div>')
+    show(f'<div class="verdict" style="border-left-color:{color}; color:{INK};">{esc(text)}</div>')
 
 
 def comment_card(text):
@@ -179,7 +200,7 @@ def quote_cards(items, good=True):
         show(f'<div class="muted">{"눈에 띄는 칭찬 항목이 없어요." if good else "눈에 띄는 불만 항목이 없어요."}</div>')
         return
     for aspect, cnt, quote in items:
-        show(f'<div class="quote" style="background:{bg}; border-left: 5px solid {color};">'
+        show(f'<div class="quote" style="border-left: 2px solid {color};">'
              f'<div class="head" style="color:{color}">{icon} {esc(aspect)}<span>{cnt}명</span></div>'
              f'<div class="body">“{esc(quote)}”</div></div>')
 
@@ -210,7 +231,7 @@ def aspect_bars(aspects):
         bars += (f'<div class="bar-row"><div class="bar-label">{esc(a)}</div><div class="bar-track">'
                  f'<div style="width:{g / top * 100}%; background:{GOOD}"></div>'
                  f'<div style="width:{b / top * 100}%; background:{BAD}"></div></div>'
-                 f'<div class="bar-num">👍{g} 👎{b}</div></div>')
+                 f'<div class="bar-num" style="width:110px">좋음 {g} · 아쉬움 {b}</div></div>')
     show(f'<div class="card">{bars}</div>')
 
 
@@ -223,7 +244,7 @@ def claim_rows(claims):
     for c in claims:
         color, bg = styles.get(c["판정"][0], styles["❔"])
         rows += (f'<div class="claim"><div><b>{esc(c["항목"])}</b>'
-                 f'<div class="muted">광고: “{esc(c["광고 표현"])}” · 리뷰 👍/👎 {esc(c["리뷰 (좋음/아쉬움)"])}</div></div>'
+                 f'<div class="muted">광고: “{esc(c["광고 표현"])}” · 리뷰 좋음/아쉬움 {esc(c["리뷰 (좋음/아쉬움)"])}</div></div>'
                  f'<span class="badge" style="background:{bg}; color:{color}">{esc(c["판정"])}</span></div>')
     show(f'<div class="card">{rows}</div>')
 
@@ -363,13 +384,13 @@ def claim_cards(cards, n_reviews):
             bar = (f'<div class="bar-row"><div class="bar-track" style="height:16px">'
                    f'<div style="width:{c["good"] / total * 100}%; background:{GOOD}"></div>'
                    f'<div style="width:{c["bad"] / total * 100}%; background:{BAD}"></div></div>'
-                   f'<div class="bar-num" style="width:110px">👍{c["good"]} 👎{c["bad"]}</div></div>'
+                   f'<div class="bar-num" style="width:130px">좋음 {c["good"]} · 아쉬움 {c["bad"]}</div></div>'
                    f'<div class="muted">전체 리뷰 {n_reviews}개 중 이 내용을 언급한 리뷰는 {total}개예요.</div>')
         quotes = ""
         for q in c["good_quotes"]:
-            quotes += f'<div class="mini-quote" style="border-color:{GOOD}">👍 “{esc(q)}”</div>'
+            quotes += f'<div class="mini-quote" style="border-color:{GOOD}"><b style="color:{GOOD}">같은 경험</b> “{esc(q)}”</div>'
         for q in c["bad_quotes"]:
-            quotes += f'<div class="mini-quote" style="border-color:{BAD}">👎 “{esc(q)}”</div>'
+            quotes += f'<div class="mini-quote" style="border-color:{BAD}"><b style="color:{BAD}">다른 경험</b> “{esc(q)}”</div>'
         show(f'<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; gap:10px">'
              f'<div style="font-weight:800; font-size:1.08rem">{esc(c["aspect"])}</div>'
              f'<span class="badge" style="background:{bg}; color:{color}">{esc(c["verdict"])}</span></div>'

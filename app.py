@@ -29,7 +29,7 @@ ui.inject_css()
 ui.hero()
 
 with st.container(border=True):
-    ui.show('<div style="font-weight:800; font-size:1.1rem; margin-bottom:4px">👤 내 피부 정보</div>'
+    ui.show('<div style="font-weight:800; font-size:1.1rem; margin-bottom:4px">내 피부 정보</div>'
             '<div class="muted" style="margin-bottom:6px">한 번만 고르면 모든 분석이 내 피부 기준으로 바뀌어요.</div>')
     p1, p2, p3 = st.columns(3)
     skin_type = p1.selectbox("피부 타입", az.SKIN_TYPES)
@@ -105,16 +105,16 @@ def _found_summary(result, web_items=(), web_ing_src=""):
     if result.get("review_total", 0) > n_rev and n_rev >= 10:
         how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
         where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
-    mark = lambda ok: "✅" if ok else "❌"
+    mark = lambda ok: "있음" if ok else "없음"
     ing_where = " (인터넷 검색에서 찾은 앞부분)" if web_ing_src else ""
-    text = (f"링크에서 가져온 정보 · 광고 문구 {mark(result['ad'])} · 전성분 {mark(n_ing)} {n_ing}개{ing_where} · "
-            f"쇼핑몰 리뷰 {mark(n_rev)} {n_rev}개{where}")
+    text = (f"링크에서 가져온 정보 — 광고 문구 {mark(result['ad'])} · 전성분 {n_ing}개{ing_where} · "
+            f"쇼핑몰 리뷰 {n_rev}개{where}")
     if web_items:
         blog = sum(i["source"] == "블로그" for i in web_items)
         sponsored = sum(i["sponsored"] for i in web_items)
-        text += f"  \n🌐 인터넷 후기 · 블로그 {blog}개 · 카페 {len(web_items) - blog}개 (협찬 표시 {sponsored}개)"
+        text += f"  \n인터넷 후기 · 블로그 {blog}개 · 카페 {len(web_items) - blog}개 (협찬 표시 {sponsored}개)"
     elif not web_search.keys():
-        text += "  \n🌐 블로그·카페 후기 검색은 꺼져 있어요 (카카오 검색 API 키를 넣으면 켜져요 · 무료)"
+        text += "  \n블로그·카페 후기 검색은 꺼져 있어요 (카카오 검색 API 키를 넣으면 켜져요 · 무료)"
     return text
 
 
@@ -124,26 +124,26 @@ def load_sample(name):
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
-u1.text_input("🔗 제품 페이지 링크", key="url", placeholder="광고에서 본 제품 페이지 주소를 붙여넣어 주세요 (https://...)")
+u1.text_input("제품 페이지 링크", key="url", placeholder="광고에서 본 제품 페이지 주소를 붙여넣어 주세요 (https://...)")
 u3.selectbox("읽을 리뷰 수", [100, 200, 400], index=2, key="review_limit",
              help="전체 기간에서 골고루 골라 읽어요. 많을수록 정확하지만 오래 걸려요 (400개 약 1분). "
                   "같은 링크는 1시간 동안 바로 다시 볼 수 있어요.")
-u2.button("분석하기 ✨", on_click=load_link, type="primary", width="stretch")
+u2.button("분석하기", on_click=load_link, type="primary", width="stretch")
 
 if st.session_state["found"]:
     st.info(st.session_state["found"])
 for note in st.session_state["notes"]:
     st.warning(note)
 
-with st.expander("🧴 링크가 없거나 잘 안 될 때: 예시로 해보기 / 직접 붙여넣기", expanded=not st.session_state["auto_run"]):
+with st.expander("링크가 없거나 잘 안 될 때: 예시로 해보기 / 직접 붙여넣기", expanded=not st.session_state["auto_run"]):
     cols = st.columns(len(SAMPLES))
     for col, name in zip(cols, SAMPLES):
         col.button(name, on_click=load_sample, args=(name,), width="stretch")
     c1, c2, c3 = st.columns(3)
-    c1.text_area("📢 광고 문구 (인스타 캡션, 상세페이지 문구 등)", key="ad", height=200)
-    c2.text_area("🧪 전성분", key="ingredients", height=200, placeholder="정제수, 글리세린, ...")
-    c3.text_area("💬 실사용 리뷰 (한 줄에 하나씩)", key="reviews", height=200)
-    clicked = st.button("🔍 분석하기", width="stretch")
+    c1.text_area("광고 문구 (인스타 캡션, 상세페이지 문구 등)", key="ad", height=200)
+    c2.text_area("전성분", key="ingredients", height=200, placeholder="정제수, 글리세린, ...")
+    c3.text_area("실사용 리뷰 (한 줄에 하나씩)", key="reviews", height=200)
+    clicked = st.button("분석하기", width="stretch")
 
 if not (clicked or st.session_state["auto_run"]):
     st.stop()
@@ -198,19 +198,19 @@ if az.satisfaction(reviews)[1] < 5:
     verdict += " 단, 리뷰를 거의 읽지 못해 실제 사용 후기는 반영되지 않았어요. 리뷰를 붙여넣어 확인해 보세요."
 ui.verdict(verdict, fit, trust)
 
-tab_review, tab_ing, tab_ad = st.tabs(["📝 리뷰 요약", "🧪 성분 분석", "📢 광고 vs 실제"])
+tab_review, tab_ing, tab_ad = st.tabs(["리뷰", "성분", "광고 vs 실제"])
 
 with tab_review:
     if combined:
         st.caption("쇼핑몰 리뷰가 적어서, 협찬 표시가 없는 블로그·카페 후기를 함께 분석했어요.")
     if web_items:
-        ui.section(f"🌐 블로그·카페 후기 {len(web_items)}개", f"‘{st.session_state.get('web_query', '')}’ 검색 결과에서 "
+        ui.section(f"블로그·카페 후기 {len(web_items)}개", f"‘{st.session_state.get('web_query', '')}’ 검색 결과에서 "
                    "이 제품 이야기인 글만 골랐어요. 글 전체가 아니라 검색 요약(앞부분)을 분석했어요.")
-        groups = [("🛍️ 쇼핑몰 리뷰", rev_text if not combined else st.session_state["reviews"])]
-        groups += [(f"☕ 카페 후기", "\n".join(i["text"] for i in web_items if i["source"] == "카페"))]
-        groups += [(f"📝 블로그 (협찬 표시 없음)", "\n".join(i["text"] for i in web_items if i["source"] == "블로그" and not i["sponsored"]))]
+        groups = [("쇼핑몰 리뷰", rev_text if not combined else st.session_state["reviews"])]
+        groups += [(f"카페 후기", "\n".join(i["text"] for i in web_items if i["source"] == "카페"))]
+        groups += [(f"블로그 (협찬 표시 없음)", "\n".join(i["text"] for i in web_items if i["source"] == "블로그" and not i["sponsored"]))]
         # 협찬 글은 리뷰 분석에서 원래 빠지므로, 협찬 문구를 지운 뒤 '내용'만 따로 평가
-        groups += [(f"💰 블로그·카페 (협찬 표시 있음)", "\n".join(
+        groups += [(f"블로그·카페 (협찬 표시 있음)", "\n".join(
             re.sub(r"[^.!?]*(협찬|체험단|제공받|원고료|서포터즈|무상으로|소정의|지원받)[^.!?]*[.!?]?", " ", i["text"])
             for i in web_items if i["sponsored"]))]
         compare = []
@@ -221,11 +221,11 @@ with tab_review:
         ui.source_compare(compare)
         ui.web_quotes([i for i in web_items if not i["sponsored"]], skin_type)
     if st.session_state.get("site_summary"):
-        ui.section("🏪 쇼핑몰이 보여주는 리뷰 요약 (참고)")
+        ui.section("쇼핑몰이 보여주는 리뷰 요약 (참고)")
         ui.site_summary(st.session_state["site_summary"])
     if reviews["count"] or reviews["sponsored"]:
         summary = az.summarize_reviews(reviews, skin_type)
-        ui.section("🗣️ 총평")
+        ui.section("총평")
         ui.comment_card(az.overall_comment(reviews, claims, skin_type, fit))
         g, b = st.columns(2)
         with g:
@@ -234,13 +234,13 @@ with tab_review:
         with b:
             ui.section("아쉬운 점 TOP 3")
             ui.quote_cards(summary["bad"], good=False)
-        ui.section("🔁 리뷰에서 많이 나온 이야기", "여러 사람이 반복해서 쓴 단어를 찾아 비슷한 문장끼리 묶었어요.")
+        ui.section("리뷰에서 많이 나온 이야기", "여러 사람이 반복해서 쓴 단어를 찾아 비슷한 문장끼리 묶었어요.")
         ui.topic_cards(rm.mine(rev_text)["topics"])
-        ui.section("💬 항목별 반응", "초록은 좋다는 의견, 빨강은 아쉽다는 의견이에요.")
+        ui.section("항목별 반응", "초록은 좋다는 의견, 빨강은 아쉽다는 의견이에요.")
         ui.aspect_bars(reviews["aspects"])
         trend = az.trend_by_year(rev_text, st.session_state.get("review_dates", []), skin_type)
         if len(trend) >= 2:
-            ui.section("📅 해마다 만족도가 어떻게 바뀌었나", "리뷰를 쓴 해별로 나눠 봤어요. 갑자기 떨어진 해가 있으면 제품이 바뀌었는지 확인해 보세요.")
+            ui.section("해마다 만족도가 어떻게 바뀌었나", "리뷰를 쓴 해별로 나눠 봤어요. 갑자기 떨어진 해가 있으면 제품이 바뀌었는지 확인해 보세요.")
             ui.trend_bars(trend)
         if reviews["pending"]:
             ui.section(f"⏳ 아직 판단을 미룬 리뷰 {reviews['pending']}개",
@@ -251,30 +251,30 @@ with tab_review:
             if reviews["by_skin"]:
                 st.dataframe(pd.DataFrame(reviews["by_skin"]).T, width="stretch")
     else:
-        ui.show('<div class="card"><b>😢 이 페이지에서 리뷰를 가져오지 못했어요.</b>'
+        ui.show('<div class="card"><b>이 페이지에서 리뷰를 가져오지 못했어요.</b>'
                 '<div class="muted" style="margin-top:6px">많은 쇼핑몰은 리뷰를 페이지가 열린 뒤 따로 불러와서, '
                 '링크만으로는 리뷰 글이 보이지 않아요.<br>쇼핑몰 리뷰 화면에서 리뷰 글을 길게 눌러 <b>복사</b>한 뒤, '
                 '위의 <b>‘직접 붙여넣기’ → 실사용 리뷰</b> 칸에 붙여넣고 분석하기를 누르면 요약해 드려요.</div></div>')
 
 with tab_ing:
-    ui.section("🧪 내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
+    ui.section("내 피부 기준 성분 분석", f"{skin_type} 피부 · 고민: {', '.join(concerns) or '없음'}"
                f" · 피하는 성분: {', '.join(avoid) or '없음'}")
     if ing_rows:
-        ui.section("🎯 내 피부와 성분 매칭 점수", "성분이 내 피부 타입·고민·피하고 싶은 성분과 얼마나 맞는지예요.")
+        ui.section("내 피부와 성분 매칭 점수", "성분이 내 피부 타입·고민·피하고 싶은 성분과 얼마나 맞는지예요.")
         ui.match_breakdown(match, match_items, skin_type, concerns, avoid)
         title_items = az.title_check(st.session_state["title"], ing_rows)
         if title_items:
-            ui.section("🏷️ 제품 이름 속 성분, 얼마나 들어 있을까?", "제품 이름에 내세운 성분이 전성분 어디에 있는지 확인했어요.")
+            ui.section("제품 이름 속 성분, 얼마나 들어 있을까?", "제품 이름에 내세운 성분이 전성분 어디에 있는지 확인했어요.")
             ui.title_check(title_items, st.session_state["title"])
         ui.ingredient_summary(ing_summary)
-        ui.section("🧩 성분 구성", "어떤 역할의 성분이 몇 개 들어 있는지예요.")
+        ui.section("성분 구성", "어떤 역할의 성분이 몇 개 들어 있는지예요.")
         ui.ingredient_groups(ing_summary["groups"], ing_summary["total"])
-        ui.section("📏 얼마나 들어 있을까?", "전성분은 많이 든 순서로 적어요. 법으로 양이 정해진 성분을 기준으로 함량을 짐작했어요.")
+        ui.section("얼마나 들어 있을까?", "전성분은 많이 든 순서로 적어요. 법으로 양이 정해진 성분을 기준으로 함량을 짐작했어요.")
         ui.ingredient_alerts(ing_summary)
         if ad_text:
-            ui.section("🔗 광고에서 말한 효과, 성분으로 뒷받침될까?")
+            ui.section("광고에서 말한 효과, 성분으로 뒷받침될까?")
             ui.claim_support(rep["support"])
-        ui.section("📋 성분 하나씩 보기", "적힌 순서대로예요. 번호가 작을수록 많이 들어 있어요.")
+        ui.section("성분 하나씩 보기", "적힌 순서대로예요. 번호가 작을수록 많이 들어 있어요.")
         ui.ingredient_list(ing_rows)
         if ing_summary["guessed"]:
             st.caption(f"‘이름으로 추정’ 표시된 {ing_summary['guessed']}개는 사전에 없어서 성분 이름 모양으로 분류했어요.")
@@ -282,10 +282,10 @@ with tab_ing:
         ui.show('<div class="card muted">분석할 수 있는 성분이 없어요. 전성분을 붙여넣어 주세요.</div>')
 
 with tab_ad:
-    ui.section(f"📊 광고 신뢰도 {trust}점은 이렇게 나왔어요")
+    ui.section(f"광고 신뢰도 {trust}점은 이렇게 나왔어요")
     ui.trust_breakdown(trust, rep["breakdown"])
 
-    ui.section("🔎 광고에서 말한 효과, 리뷰로 확인해 봤어요",
+    ui.section("광고에서 말한 효과, 리뷰로 확인해 봤어요",
                "광고 문장 → 그 내용을 언급한 리뷰 → 실제 리뷰 순서로 보여드려요.")
     if not ad_text:
         ui.show('<div class="card muted">광고 문구가 없어서 비교할 수 없어요.</div>')
@@ -300,16 +300,16 @@ with tab_ad:
         ui.show('<div class="card muted">광고에서 보습·진정·트러블 같은 효과 주장을 찾지 못했어요.</div>')
 
     if rep["support"]:
-        ui.section("🔗 광고 효과 ↔ 성분 근거", "광고에서 말한 효과를 내는 대표 성분이 실제로 들어 있는지예요.")
+        ui.section("광고 효과 ↔ 성분 근거", "광고에서 말한 효과를 내는 대표 성분이 실제로 들어 있는지예요.")
         ui.claim_support(rep["support"])
 
-    ui.section("🔢 숫자·시험 결과 광고, 이렇게 읽으세요")
+    ui.section("숫자·시험 결과 광고, 이렇게 읽으세요")
     ui.number_and_tests(rep["numbers"], rep["has_condition"], rep["tests"])
 
-    ui.section("😮 조심해서 볼 광고 표현")
+    ui.section("조심해서 볼 광고 표현")
     ui.flagged_words(rep["exaggerations"], rep["medical"], rep["disclosed"])
 
-    ui.section("🗣️ 광고를 언급한 실제 리뷰", "‘광고’, ‘인스타’, ‘상세페이지’ 등을 언급한 리뷰예요.")
+    ui.section("광고를 언급한 실제 리뷰", "‘광고’, ‘인스타’, ‘상세페이지’ 등을 언급한 리뷰예요.")
     ui.ad_mentions(rep["ad_mentions"])
 
 st.caption("※ 이 분석은 참고용이에요. 피부 반응은 개인차가 있으니 패치 테스트를 권장해요.")
