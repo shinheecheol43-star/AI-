@@ -4,7 +4,7 @@
   developers.kakao.com 에서 앱을 만들고 'REST API 키'를 Streamlit Secrets의 KAKAO_REST_API_KEY 에 넣으면 켜져요.
 - 네이버 검색 API (선택): 2026년부터 NAVER API HUB(네이버 클라우드)로 옮겨졌어요.
   NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 에 API HUB에서 받은 키를 넣으면 함께 써요.
-- 검색 결과의 '요약 글(본문 일부)'만 써요. 블로그 본문을 통째로 긁어오지 않아요.
+- 후기는 검색 결과의 '요약 글(본문 일부)'만 써요. 전성분은 검색으로 찾은 페이지를 열어 성분 목록만 뽑고, 본문은 저장·표시하지 않아요.
 """
 
 import html
@@ -135,19 +135,108 @@ def collect_reviews(title, brand="", limit=300):
     return out[:limit], query
 
 
+def _page_url(link):
+    """네이버 블로그는 본문이 안쪽 창(iframe)에 있어서 모바일 주소로 연다."""
+    m = re.match(r"https?://blog\.naver\.com/([^/?#]+)/(\d+)", link)
+    if m:
+        return f"https://m.blog.naver.com/{m.group(1)}/{m.group(2)}"
+    m = re.match(r"https?://blog\.naver\.com/PostView\.n(?:hn|aver)\?(.*)", link)
+    if m:
+        return f"https://m.blog.naver.com/PostView.naver?{m.group(1)}"
+    return link
+
+
+def _list_from_text(text):
+    """글 전체에서 '전성분' 뒤(없으면 '정제수'부터)의 쉼표 목록만 잘라낸다. 문장이 나오면 거기서 멈춘다."""
+    import ocr
+    seg = ocr.extract_section(text)
+    if not seg:
+        return ""
+    lines = [l for l in seg.split("\n") if l.strip()]
+    if seg.count(",") < 5 and len(lines) >= 8:   # 성분을 한 줄에 하나씩 적은 글
+        seg = ", ".join(lines)
+    seg = re.sub(r"\s*\n\s*", " ", seg)
+    items = []
+    for part in re.split(r",(?!\s*\d+-)", seg):  # '1,2-헥산다이올'의 쉼표는 나누지 않음
+        part = part.strip(" .·*")
+        if not part:
+            continue
+        if len(part) > 45 or re.search(r"(니다|어요|해요|에요|네요|습니다|[.!?~]\s)", part):
+            if len(items) >= 8:
+                break
+            items = []          # 아직 목록이 시작되기 전의 문장
+            continue
+        items.append(part)
+    return ", ".join(items) if len(items) >= 8 else ""
+
+
+def _ingredients_from_page(link, words, allow_ocr):
+    """검색으로 찾은 페이지 하나에서 이 제품의 전성분만 뽑는다. 본문은 저장하지 않는다."""
+    import fetcher
+    url = _page_url(link)
+    try:
+        page = fetcher.fetch_html(url, timeout=8)
+    except Exception:
+        return "", link
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(page, "html.parser")
+    head = (soup.title.get_text(" ", strip=True) if soup.title else "") + " " + soup.get_text(" ", strip=True)[:3000]
+    if not _relevant(head, words):
+        return "", link
+    found = fetcher.parse(page)["ingredients"]
+    if not found or found.count(",") < 8:
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        found = _list_from_text(soup.get_text("\n", strip=True)) or found
+    if (not found or found.count(",") < 8) and allow_ocr:
+        import ocr
+        if ocr.available():
+            found, _ = ocr.find_in_images(page, url, budget=25, max_images=30)
+    return (found if found and found.count(",") >= 8 else ""), link
+
+
+def _names(text):
+    return {re.sub(r"\(.*?\)|\s", "", t) for t in re.split(r",(?!\s*\d+-)", text) if t.strip()}
+
+
+def _same_list(a, b):
+    x, y = _names(a), _names(b)
+    return len(x & y) / max(1, min(len(x), len(y))) >= 0.7
+
+
 def find_ingredients(title, brand=""):
-    """'제품명 전성분'으로 검색해서 전성분 글(앞부분)을 찾는다. 검색 요약은 길이가 짧아 뒷부분이 잘릴 수 있다."""
+    """'제품명 전성분'으로 검색하고, 찾은 페이지(다른 쇼핑몰·블로그 등)를 열어 전성분 목록만 뽑는다.
+    여러 곳의 목록이 서로 같으면 그 목록을 믿는다.
+    반환: (전성분, 출처 링크, {"pages": 목록을 찾은 곳 수, "agree": 같은 목록을 낸 곳 수, "partial": 검색 요약만 찾았는지})"""
     credentials = keys()
     if not credentials or not title:
-        return "", ""
+        return "", "", {}
     words = product_words(title)[:4] + ([_brand(brand)] if _brand(brand) else [])
-    best, src = "", ""
-    for kind in ("blog", "web", "cafe"):
-        for it in _search(kind, f"{make_query(title, brand)} 전성분", 1, credentials):
-            d = _clean(it.get("description"))
-            if "정제수" not in d or not _relevant(_clean(it.get("title")) + " " + d, words):
+    query = f"{make_query(title, brand)} 전성분"
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(lambda k: (k, _search(k, query, 1, credentials)), ("web", "blog", "cafe")))
+    snippet, snippet_src, links = "", "", []
+    for kind, items in results:
+        for it in items:
+            t, d = _clean(it.get("title")), _clean(it.get("description"))
+            if not _relevant(t + " " + d, words):
                 continue
-            part = d[d.find("정제수"):].split("...")[0]
-            if part.count(",") > best.count(","):
-                best, src = part.rstrip(", "), it.get("link", "")
-    return (best, src) if best.count(",") >= 4 else ("", "")
+            if "정제수" in d:
+                part = d[d.find("정제수"):].split("...")[0]
+                if part.count(",") > snippet.count(","):
+                    snippet, snippet_src = part.rstrip(", "), it.get("link", "")
+            # 카페 글은 로그인이 필요한 경우가 많아 요약만 쓰고, 쇼핑몰·블로그 페이지를 연다
+            if kind != "cafe" and ("전성분" in t + d or "성분" in t) and it.get("link", "").startswith("http"):
+                links.append((kind, it["link"]))
+    links = list(dict.fromkeys(links))[:6]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        # 글자로 된 목록이 없을 때 이미지 글자 인식은 쇼핑몰 페이지 2곳까지만 (시간이 오래 걸려서)
+        ocr_ok = {link for _, link in [l for l in links if l[0] == "web"][:2]}
+        found = [f for f in pool.map(lambda l: _ingredients_from_page(l[1], words, l[1] in ocr_ok), links) if f[0]]
+    if found:
+        scored = [(sum(_same_list(a, b) for b, _ in found), a.count(","), a, src) for a, src in found]
+        agree, _, best, src = max(scored)
+        return best, src, {"pages": len(found), "agree": agree, "partial": False}
+    if snippet.count(",") >= 4:
+        return snippet, snippet_src, {"pages": 0, "agree": 0, "partial": True}
+    return "", "", {}

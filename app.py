@@ -48,6 +48,8 @@ st.session_state.setdefault("site_summary", [])
 st.session_state.setdefault("web_items", [])
 st.session_state.setdefault("web_query", "")
 st.session_state.setdefault("ing_image", "")
+st.session_state.setdefault("web_ing_src", "")
+st.session_state.setdefault("web_ing_info", {})
 st.session_state.setdefault("sampled_evenly", False)
 
 
@@ -79,12 +81,14 @@ def load_link():
                                                     text=f"리뷰 읽는 중… {done}/{total}개")
         result = read_link_cached(url, limit, progress)
         bar.empty()
-        web_items, web_query, web_ing_src = [], "", ""
+        web_items, web_query, web_ing_src, web_ing_info = [], "", "", {}
         if web_search.keys():
             with st.spinner("블로그·카페에서 이 제품 후기를 더 찾는 중이에요…"):
                 web_items, web_query = web_search.collect_reviews(result["title"], result.get("site_name", ""))
                 if not result["ingredients"]:
-                    found_ing, web_ing_src = web_search.find_ingredients(result["title"], result.get("site_name", ""))
+                    st.toast("상품 페이지에 전성분이 없어서 인터넷에서 찾아보는 중이에요…")
+                    found_ing, web_ing_src, web_ing_info = web_search.find_ingredients(result["title"],
+                                                                                       result.get("site_name", ""))
                     if found_ing:
                         result["ingredients"] = found_ing
                         result["notes"] = [n for n in result["notes"] if not n.startswith("전성분을")]
@@ -96,11 +100,11 @@ def load_link():
                             found=_found_summary(result), review_total=result.get("review_total", 0),
                             review_dates=result.get("review_dates", []), sampled_evenly=result.get("sampled_evenly", False),
                             site_summary=result.get("site_summary", []), web_items=web_items, web_query=web_query,
-                            web_ing_src=web_ing_src, ing_image=result.get("ing_image", ""))
-    st.session_state["found"] = _found_summary(result, web_items, web_ing_src)
+                            web_ing_src=web_ing_src, web_ing_info=web_ing_info, ing_image=result.get("ing_image", ""))
+    st.session_state["found"] = _found_summary(result, web_items, web_ing_src, web_ing_info)
 
 
-def _found_summary(result, web_items=(), web_ing_src=""):
+def _found_summary(result, web_items=(), web_ing_src="", web_ing_info=None):
     n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
     n_ing = len(az._tokens(result["ingredients"])) if result["ingredients"] else 0  # '1,2-헥산다이올' 속 쉼표는 세지 않음
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
@@ -109,7 +113,7 @@ def _found_summary(result, web_items=(), web_ing_src=""):
         where += f" · 전체 {result['review_total']:,}개 중 {how} 리뷰"
     mark = lambda ok: "있음" if ok else "없음"
     ing_where = (" (상세 이미지에서 글자 인식으로 읽음)" if result.get("ing_image") else
-                 " (인터넷 검색에서 찾은 앞부분)" if web_ing_src else "")
+                 _web_ing_label(web_ing_info or {}) if web_ing_src else "")
     text = (f"링크에서 가져온 정보 — 광고 문구 {mark(result['ad'])} · 전성분 {n_ing}개{ing_where} · "
             f"쇼핑몰 리뷰 {n_rev}개{where}")
     if web_items:
@@ -121,13 +125,21 @@ def _found_summary(result, web_items=(), web_ing_src=""):
     return text
 
 
+def _web_ing_label(info):
+    if info.get("partial"):
+        return " (인터넷 검색 요약에서 찾은 앞부분)"
+    if info.get("agree", 0) >= 2:
+        return f" (인터넷 페이지 {info['agree']}곳에서 같은 목록 확인)"
+    return " (인터넷 페이지 1곳에서 찾음 · 다른 곳과 비교는 못 했어요)"
+
+
 def read_ingredient_capture():
     up = st.session_state.get("ing_capture")
     if not up:
         return
     text = ocr.read_upload(up.getvalue())
     if text:
-        st.session_state.update(ingredients=text, ing_image="", notes=[
+        st.session_state.update(ingredients=text, ing_image="", web_ing_src="", notes=[
             n for n in st.session_state["notes"] if not n.startswith("전성분을")])
     else:
         st.session_state["notes"] = st.session_state["notes"] + ["캡처에서 전성분을 읽지 못했어요. 성분표 부분만 크게 캡처해 주세요."]
@@ -135,7 +147,8 @@ def read_ingredient_capture():
 
 def load_sample(name):
     st.session_state.update(SAMPLES[name], title=name, notes=[], auto_run=False, found="", review_total=0,
-                            review_dates=[], sampled_evenly=False, site_summary=[], web_items=[], web_query="", ing_image="")
+                            review_dates=[], sampled_evenly=False, site_summary=[], web_items=[], web_query="", ing_image="",
+                            web_ing_src="", web_ing_info={})
 
 
 u1, u3, u2 = st.columns([4, 1.3, 1], vertical_alignment="bottom")
@@ -283,6 +296,11 @@ with tab_ing:
         ui.show(f'<div class="muted">전성분이 상세페이지 <b>이미지</b>에만 있어서 글자 인식으로 읽었어요. '
                 f'일부 글자가 틀릴 수 있어요 · <a href="{ui.esc(st.session_state["ing_image"])}" target="_blank" '
                 f'rel="noopener">원본 이미지 보기</a></div>')
+    src = st.session_state.get("web_ing_src", "")
+    if ing_rows and src.startswith(("http://", "https://")):
+        ui.show(f'<div class="muted">상품 페이지에 전성분이 없어서 인터넷에서 찾은 목록이에요'
+                f'{ui.esc(_web_ing_label(st.session_state.get("web_ing_info", {})))}. 제품 리뉴얼 전 성분일 수도 있으니 '
+                f'구매 전 한 번 더 확인해 주세요 · <a href="{ui.esc(src)}" target="_blank" rel="noopener">찾은 곳 보기</a></div>')
     if ing_rows:
         ui.section("내 피부와 성분 매칭 점수", "성분이 내 피부 타입·고민·피하고 싶은 성분과 얼마나 맞는지예요.")
         ui.match_breakdown(match, match_items, skin_type, concerns, avoid)
