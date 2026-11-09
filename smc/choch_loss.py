@@ -74,7 +74,9 @@ def trade_list(sym, tf, side):
                         break_vol=vol[t] / max(vol[max(0, t - 20):t].mean(), 1e-12),
                         fvg_size=(s["top"] - s["bot"]) / a, stop_atr=(px - stop) / a,
                         retrace=(leg_hi - px) / max(leg_hi - lo, 1e-12), wait=e - s["start"],
-                        prior_drop=(c[t - 1] - c[max(0, t - 51)]) / a, htf=float(s["reg"])))
+                        prior_drop=(c[t - 1] - c[max(0, t - 51)]) / a, htf=float(s["reg"]),
+                        ob_wick=(min(o[ob], c[ob]) - l[ob]) / (h[ob] - l[ob]) if h[ob] > l[ob] else 0.0,
+                        disp=abs(c[s["fi"] - 1] - o[s["fi"] - 1]) / a))
     return out
 
 
@@ -93,6 +95,10 @@ def run_trade(o, h, l, c, atr, e, px, stop, hold, rule):
         if j > 0:                                           # 체결 봉 안의 순서는 모르므로 그 봉 고가는 다음부터 반영
             best = max(best, h[u])
             mfe = max(mfe, (best - px) / dist)
+        if "fixed" in rule:                                 # 고정 목표 (추적 없음)
+            if j > 0 and h[u] >= px + rule["fixed"] * dist:
+                return rule["fixed"] - (MAKER + MAKER) * abs(px) / dist, u, mfe, j
+            continue
         new = best - 3.0 * a
         if "be" in rule and mfe >= rule["be"]:
             new = max(new, px + 2 * TAKER * abs(px))
