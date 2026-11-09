@@ -116,8 +116,20 @@ def _find_ingredients_in_table(soup):
     return ""
 
 
+def _join_broken(lines):
+    """성분 목록 중간에 줄바꿈이 들어간 경우('…추출물' / ', 피토스테롤, …') 한 줄로 잇는다."""
+    out = []
+    for line in lines:
+        if out and (line.startswith(",") or out[-1].rstrip().endswith(",")) and out[-1].count(",") >= 2:
+            out[-1] = out[-1].rstrip(" ,") + ", " + line.lstrip(" ,")
+        else:
+            out.append(line)
+    return out
+
+
 def _find_ingredients(lines):
     """'전성분' 다음에 오는 글, 또는 정제수·글리세린이 들어간 쉼표 많은 줄을 성분표로 본다."""
+    lines = _join_broken(lines)
     # 1순위: '전성분/FULL INGREDIENTS', 2순위: 그냥 'ingredients' ('Key Ingredients' 같은 주요 성분 소개는 빼고)
     for label in (r"전\s*성분|모든 성분|full\s+ingredients?|ingredients?\s*list", r"(?<!key )ingredients"):
         for i, line in enumerate(lines):
