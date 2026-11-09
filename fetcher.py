@@ -185,6 +185,16 @@ def _find_ad_lines(lines, limit=15):
 
 def clean_title(title):
     """'[55%] [더블기획] 제품명 _1개당 22,375원' 같은 할인 문구를 정리한다."""
+    # '제품명 이벤트 혜택/52% 특가/6개/118000원/증정' → '/'로 나눈 조각 중 홍보 문구가 나오기 전까지만
+    PROMO = r"특가|할인|증정|혜택|이벤트|\d+%|\d[\d,]*원|\d+\s*(개|BOX|box|세트|매)|기획|사은품|무료배송|1\+1"
+    parts = title.split("/")
+    kept = []
+    for part in parts:
+        if kept and re.search(PROMO, part):
+            break
+        kept.append(part)
+    title = "/".join(kept)
+    title = re.sub(r"\s*(이벤트\s*혜택|이벤트|혜택가|특가|기획전?)\s*$", "", title)
     t = re.sub(r"\[[^\]]*\]|【[^】]*】", " ", title)
     t = re.sub(r"\s*[_|]\s*\d.*원.*$", "", t)
     t = re.sub(r"\s*\|.*$", "", t)  # '제품명 | 쇼핑몰 이름'

@@ -102,7 +102,7 @@ def load_link():
 
 def _found_summary(result, web_items=(), web_ing_src=""):
     n_rev = len(result["reviews"].split("\n")) if result["reviews"] else 0
-    n_ing = len([x for x in result["ingredients"].split(",") if x.strip()]) if result["ingredients"] else 0
+    n_ing = len(az._tokens(result["ingredients"])) if result["ingredients"] else 0  # '1,2-헥산다이올' 속 쉼표는 세지 않음
     where = f" ({', '.join(result['sources'])}에서)" if result.get("sources") else ""
     if result.get("review_total", 0) > n_rev and n_rev >= 10:
         how = "전체 기간에서 골고루 고른" if result.get("sampled_evenly") else "최근"
