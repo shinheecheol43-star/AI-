@@ -94,13 +94,21 @@ def chunk_cue(cue: Cue, max_chars: int) -> list[Cue]:
     """긴 문장을 화면에 맞게 여러 자막으로 나눈다 (어절 단위)."""
     if len(cue.text) <= max_chars:
         return [cue]
-    words, lines, cur = cue.text.split(), [], ""
-    for w in words:
-        if cur and len(cur) + 1 + len(w) > max_chars:
+    words = cue.text.split()
+    # 필요한 줄 수를 정한 뒤, 각 줄 길이가 비슷해지도록 어절을 나눈다
+    n = min(len(words), -(-len(cue.text) // max_chars))
+    target = len(cue.text) / n
+    lines, cur = [], ""
+    for i, w in enumerate(words):
+        remaining_words = len(words) - i
+        remaining_lines = n - len(lines)
+        trial = f"{cur} {w}".strip()
+        if cur and (len(trial) > target * 1.15 or remaining_words < remaining_lines) \
+                and len(lines) < n - 1:
             lines.append(cur)
             cur = w
         else:
-            cur = f"{cur} {w}".strip()
+            cur = trial
     if cur:
         lines.append(cur)
     total = sum(len(x) for x in lines) or 1

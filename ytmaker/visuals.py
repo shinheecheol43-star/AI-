@@ -112,3 +112,27 @@ def make_thumbnail(path: str, text: str, size: tuple[int, int], font_path: str,
     _draw_centered(img, text, font_path, fs, 0.5, max_w_ratio=0.9,
                    fill=(255, 255, 255), stroke=max(4, fs // 12), accent=(255, 230, 0))
     img.save(path)
+
+
+def compose_media_card(src: str, path: str, caption: str, size: tuple[int, int],
+                       font_path: str, vertical: bool) -> None:
+    """AI 이미지 위에 장면 핵심 문구를 얹는다 (화면 위쪽, 반투명 그림자 띠)."""
+    w, h = size
+    W, H = int(w * 1.15), int(h * 1.15)
+    img = Image.open(src).convert("RGB")
+    scale = max(W / img.width, H / img.height)
+    img = img.resize((int(img.width * scale) + 1, int(img.height * scale) + 1), Image.LANCZOS)
+    left, top = (img.width - W) // 2, (img.height - H) // 2
+    img = img.crop((left, top, left + W, top + H))
+    if caption:
+        # 글자가 잘 보이도록 위쪽을 살짝 어둡게
+        band = Image.new("L", (W, H), 0)
+        bd = ImageDraw.Draw(band)
+        band_h = int(H * (0.3 if vertical else 0.34))
+        for y in range(band_h):
+            bd.line([(0, y), (W, y)], fill=int(110 * (1 - y / band_h)))
+        img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), img, band)
+        fs = int(min(W, H) * (0.075 if vertical else 0.08))
+        _draw_centered(img, caption, font_path, fs, 0.16 if vertical else 0.17,
+                       stroke=max(3, fs // 14))
+    img.save(path)

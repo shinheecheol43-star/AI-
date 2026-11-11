@@ -160,6 +160,11 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
         clip_dur = dur + TAIL_PAD
 
         bg = _find_media(scene, i, script_dir)
+        if bg is not None and bg.lower().endswith(IMAGE_EXT) and scene.get("caption"):
+            composed = os.path.join(work, f"card_{n}.png")
+            visuals.compose_media_card(bg, composed, scene["caption"], (fmt.width, fmt.height),
+                                       font_path, fmt.vertical)
+            bg = composed
         if bg is None:
             bg = os.path.join(work, f"card_{n}.png")
             visuals.make_scene_card(bg, scene.get("caption", ""), i, total,
