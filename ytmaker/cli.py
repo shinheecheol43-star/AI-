@@ -14,6 +14,7 @@ import re
 import sys
 
 from .config import FORMATS
+from .presets import PRESETS
 
 
 def _slug(text: str) -> str:
@@ -52,7 +53,8 @@ def _cmd_script(a) -> str:
     from .script_gen import generate_script
 
     print(f"대본 생성 중… (주제: {a.topic})")
-    script = generate_script(a.topic, a.minutes, a.format, a.style)
+    script = generate_script(a.topic, a.minutes, a.format, a.style,
+                             preset=PRESETS[a.preset], age=a.age)
     return _save_script(script, a.output, a.topic, a.format)
 
 
@@ -63,8 +65,12 @@ def _cmd_build(a, script_path: str | None = None) -> None:
     script = load_script(path)
     script_dir = os.path.dirname(os.path.abspath(path))
     out_dir = a.out or os.path.join(script_dir, "output")
+    # --preset를 안 주면 대본에 기록된 프리셋을 쓴다
+    preset = PRESETS[a.preset or script.get("preset") or "general"]
+    print(f"프리셋: {preset.name}")
     opts = BuildOptions(
-        fmt=FORMATS[a.format], tts_engine=a.tts, voice=a.voice, rate=a.rate, font=a.font,
+        fmt=FORMATS[a.format], preset=preset, tts_engine=a.tts, voice=a.voice, rate=a.rate,
+        pitch=a.pitch, font=a.font,
         bgm=a.bgm, bgm_volume=a.bgm_volume, burn_subs=not a.no_burn_subs, keep_work=a.keep_work,
     )
     result = build_video(script, script_dir, out_dir, opts)
@@ -74,13 +80,16 @@ def _cmd_build(a, script_path: str | None = None) -> None:
     print(f"  길이       {result['duration']}초")
 
 
-def _add_build_args(p: argparse.ArgumentParser) -> None:
+def _add_build_args(p: argparse.ArgumentParser, with_preset: bool = True) -> None:
+    if with_preset:
+        p.add_argument("--preset", choices=list(PRESETS),
+                       help="general / kids (기본: 대본에 기록된 값)")
     p.add_argument("--out", help="출력 폴더 (기본: 대본 폴더/output)")
     p.add_argument("--tts", choices=["edge", "silent"], default="edge",
                    help="edge=무료 Edge TTS(인터넷 필요), silent=무음(직접 녹음/테스트)")
-    p.add_argument("--voice", default="ko-KR-SunHiNeural",
-                   help="Edge TTS 목소리 (예: ko-KR-InJoonNeural, ko-KR-HyunsuMultilingualNeural)")
-    p.add_argument("--rate", default="+5%", help="말하기 속도 (예: +10%%, -5%%)")
+    p.add_argument("--voice", help="Edge TTS 목소리 (예: ko-KR-SunHiNeural, ko-KR-InJoonNeural)")
+    p.add_argument("--rate", help="말하기 속도 (예: +10%%, -5%%). 기본값은 프리셋에 따름")
+    p.add_argument("--pitch", help="목소리 높낮이 (예: +10Hz, -5Hz)")
     p.add_argument("--font", help="한글 폰트 파일 경로 (.ttf/.otf)")
     p.add_argument("--bgm", help="배경음악 파일 (mp3 등, 저작권 무료 음원 권장)")
     p.add_argument("--bgm-volume", type=float, default=0.12)
@@ -100,14 +109,17 @@ def main(argv: list[str] | None = None) -> None:
         p.add_argument("--minutes", type=float, default=None, help="목표 길이(분)")
         p.add_argument("--style", help="톤/스타일 (예: '유쾌하고 빠른 템포', '차분한 다큐')")
         p.add_argument("-o", "--output", help="대본 저장 경로 (기본: projects/<주제>/script.json)")
+        p.add_argument("--age", default="4~7", help="키즈 프리셋의 대상 나이 (예: 3~5, 6~9)")
 
     for name in ("script", "make"):
         p = sub.add_parser(name, help="AI로 대본 생성" if name == "script" else "대본 생성 + 영상 제작")
         topic_args(p)
         p.add_argument("--format", choices=list(FORMATS), default="long",
                        help="long=가로 16:9, shorts=세로 9:16")
+        p.add_argument("--preset", choices=list(PRESETS), default="general",
+                       help="general=일반 채널, kids=어린이 채널")
         if name == "make":
-            _add_build_args(p)
+            _add_build_args(p, with_preset=False)
 
     p = sub.add_parser("build", help="대본 JSON으로 영상 제작")
     p.add_argument("script", help="script.json 경로")

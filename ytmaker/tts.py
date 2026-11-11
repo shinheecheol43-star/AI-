@@ -41,11 +41,11 @@ def _proportional_cues(sentences: list[str], duration: float) -> list[Cue]:
     return cues
 
 
-async def _edge_tts(text: str, voice: str, rate: str, out_path: str) -> list[Cue]:
+async def _edge_tts(text: str, voice: str, rate: str, pitch: str, out_path: str) -> list[Cue]:
     import edge_tts
 
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
-    comm = edge_tts.Communicate(text, voice, rate=rate, boundary="SentenceBoundary", proxy=proxy)
+    comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, boundary="SentenceBoundary", proxy=proxy)
     cues: list[Cue] = []
     with open(out_path, "wb") as f:
         async for chunk in comm.stream():
@@ -63,6 +63,7 @@ def synthesize(
     engine: str = "edge",
     voice: str = DEFAULT_VOICE,
     rate: str = "+0%",
+    pitch: str = "+0Hz",
 ) -> tuple[float, list[Cue]]:
     """음성 파일을 만들고 (길이, 자막 큐 목록)을 반환한다.
 
@@ -72,7 +73,7 @@ def synthesize(
     """
     sentences = split_sentences(text)
     if engine == "edge":
-        cues = asyncio.run(_edge_tts(text, voice, rate, out_path))
+        cues = asyncio.run(_edge_tts(text, voice, rate, pitch, out_path))
         duration = probe_duration(out_path)
         if not cues:
             cues = _proportional_cues(sentences, duration)

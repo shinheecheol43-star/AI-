@@ -46,7 +46,7 @@ _FONT_GLOBS = [
 ]
 
 
-def find_font(explicit: str | None = None) -> str:
+def find_font(explicit: str | None = None, preferred: tuple = ()) -> str:
     """한글을 표시할 수 있는 폰트 파일 경로를 찾는다."""
     if explicit:
         if not os.path.isfile(explicit):
@@ -55,7 +55,7 @@ def find_font(explicit: str | None = None) -> str:
     env = os.environ.get("YTMAKER_FONT")
     if env and os.path.isfile(env):
         return env
-    for path in _FONT_CANDIDATES:
+    for path in [os.path.expanduser(p) for p in preferred] + _FONT_CANDIDATES:
         if os.path.isfile(path):
             return path
     for pattern in _FONT_GLOBS:

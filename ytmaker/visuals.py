@@ -6,15 +6,7 @@ import random
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-# 장면마다 돌아가며 쓰는 배경 그라데이션 (위 → 아래)
-PALETTES = [
-    ((20, 24, 58), (88, 40, 140)),
-    ((8, 48, 72), (16, 128, 140)),
-    ((60, 16, 40), (196, 72, 72)),
-    ((18, 18, 22), (64, 64, 84)),
-    ((14, 56, 40), (60, 150, 100)),
-    ((70, 40, 10), (210, 130, 40)),
-]
+from .presets import GENERAL
 
 
 def _gradient(w: int, h: int, top, bottom, seed: int) -> Image.Image:
@@ -76,12 +68,13 @@ def _draw_centered(img: Image.Image, text: str, font_path: str, size: int, y_cen
 
 
 def make_scene_card(path: str, caption: str, index: int, total: int, size: tuple[int, int],
-                    font_path: str, vertical: bool) -> None:
+                    font_path: str, vertical: bool, palettes=None) -> None:
     """AI 영상/이미지가 없는 장면용 배경 카드."""
     w, h = size
     # Ken Burns 확대 여유를 위해 약간 크게 만든다
     W, H = int(w * 1.15), int(h * 1.15)
-    top, bottom = PALETTES[index % len(PALETTES)]
+    palettes = palettes or GENERAL.palettes
+    top, bottom = palettes[index % len(palettes)]
     img = _gradient(W, H, top, bottom, seed=index)
     if caption:
         fs = int(min(W, H) * (0.085 if vertical else 0.095))
@@ -102,7 +95,7 @@ def make_scene_card(path: str, caption: str, index: int, total: int, size: tuple
 
 
 def make_thumbnail(path: str, text: str, size: tuple[int, int], font_path: str,
-                   background: str | None = None) -> None:
+                   background: str | None = None, colors=((180, 20, 40), (30, 10, 60))) -> None:
     """유튜브 썸네일 (가로 1280x720 / 쇼츠는 1080x1920)."""
     w, h = size
     if background:
@@ -114,7 +107,7 @@ def make_thumbnail(path: str, text: str, size: tuple[int, int], font_path: str,
         shade = Image.new("RGB", (w, h), (0, 0, 0))
         img = Image.blend(img, shade, 0.35)
     else:
-        img = _gradient(w, h, (180, 20, 40), (30, 10, 60), seed=99)
+        img = _gradient(w, h, colors[0], colors[1], seed=99)
     fs = int(min(w, h) * (0.2 if h <= w else 0.12))
     _draw_centered(img, text, font_path, fs, 0.5, max_w_ratio=0.9,
                    fill=(255, 255, 255), stroke=max(4, fs // 12), accent=(255, 230, 0))

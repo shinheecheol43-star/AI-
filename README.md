@@ -107,6 +107,28 @@ API 키 없이도 쓸 수 있습니다. `examples/sample/script.json` 처럼 대
 python -m ytmaker build examples/sample/script.json
 ```
 
+## 어린이 채널 모드 (`--preset kids`)
+
+```bash
+python -m ytmaker make "동물들은 어떻게 잘까?" --preset kids --age 4~7 --format shorts
+```
+
+키즈 모드에서는 다음이 달라집니다.
+
+- **대본**: 쉬운 낱말, 짧은 문장, 다정한 존댓말("~해요")로 씁니다. 아이가 대답하거나 따라 할 수 있는 질문을 넣고, 핵심 내용은 한 번 더 반복합니다.
+- **금지 내용**: 무섭거나 위험한 내용(따라 하면 다칠 수 있는 행동 포함), 구매 유도, 구독·댓글 요청은 넣지 않습니다.
+- **목소리**: 조금 느리고(`-8%`) 밝은 톤(`+8Hz`)으로 읽습니다.
+- **화면**: 파스텔 색감, 둥근 글꼴(나눔스퀘어라운드가 있으면 사용), 큰 자막을 씁니다.
+- **AI 영상 프롬프트**: 귀여운 3D 애니메이션 화풍이 자동으로 붙습니다.
+- **업로드 체크리스트**: `metadata.txt`에 아동용 설정 안내가 함께 들어갑니다.
+
+예시 대본은 `examples/kids_animals_sleep/script.json` 입니다.
+
+> **어린이 영상을 올릴 때 꼭 확인할 것**
+> - 업로드할 때 시청자층을 **"예, 아동용으로 설정합니다"** 로 선택하세요. 미국 COPPA 규정 때문에 의무이며, 이렇게 설정하면 댓글과 맞춤 광고가 꺼집니다.
+> - AI로 만든 사실적인 영상은 "변경된 콘텐츠 또는 합성 콘텐츠" 항목에 표시해야 할 수 있습니다.
+> - 비슷한 영상을 대량으로 찍어내면 수익화가 제한될 수 있습니다. 주제, 캐릭터, 구성에 채널만의 개성을 넣으세요.
+
 ## 대본 형식 (`script.json`)
 
 ```json
@@ -133,4 +155,13 @@ python -m ytmaker build examples/sample/script.json
 - Edge TTS와 Claude API는 인터넷 연결이 필요합니다.
 - 배경음악은 [YouTube 오디오 보관함](https://studio.youtube.com/) 같은 저작권 걱정 없는 음원을 쓰세요.
 - AI가 쓴 대본의 사실 관계는 올리기 전에 꼭 직접 확인하세요.
-- Higgsfield를 Claude와 바로 연결하려면 claude.ai 커넥터 설정에서 Higgsfield MCP를 추가하세요. 그러면 장면 프롬프트로 영상을 생성해 `assets/` 에 넣는 일까지 Claude에게 맡길 수 있습니다.
+
+## Higgsfield를 Claude에 연결하기 (커스텀 커넥터)
+
+1. claude.ai → **설정 → 커넥터**(https://claude.ai/customize/connectors) → **커스텀 커넥터 추가**
+2. 이름에는 `Higgsfield`, URL에는 `https://mcp.higgsfield.ai/mcp` 를 넣습니다.
+3. **연결** 버튼을 누르고 Higgsfield 계정으로 로그인해 권한을 허용합니다.
+4. **새 대화나 세션을 시작**합니다. 커넥터는 세션이 시작될 때 불러옵니다.
+
+연결하려면 Higgsfield 유료 구독이 있어야 하고, 영상을 만들 때마다 Higgsfield 크레딧이 차감됩니다.
+연결한 뒤에는 Claude에게 "visual_prompts.md의 장면들을 Higgsfield로 만들어 assets에 넣어 줘"라고 맡길 수 있습니다.

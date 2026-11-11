@@ -12,6 +12,7 @@ from PIL import ImageFont
 
 from . import tts, visuals
 from .config import VideoFormat, find_font
+from .presets import GENERAL, Preset
 
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp")
 VIDEO_EXT = (".mp4", ".mov", ".webm", ".mkv")
@@ -21,9 +22,11 @@ TAIL_PAD = 0.35  # 장면 사이 숨 고르기(초)
 @dataclass
 class BuildOptions:
     fmt: VideoFormat
+    preset: Preset = GENERAL
     tts_engine: str = "edge"
-    voice: str = tts.DEFAULT_VOICE
-    rate: str = "+0%"
+    voice: str | None = None  # None이면 프리셋 기본값
+    rate: str | None = None
+    pitch: str | None = None
     font: str | None = None
     bgm: str | None = None
     bgm_volume: float = 0.12
@@ -100,9 +103,10 @@ def _write_srt(cues: list[tts.Cue], path: str) -> None:
             f.write(f"{i}\n{_ts(c.start, ',')} --> {_ts(c.end, ',')}\n{c.text}\n\n")
 
 
-def _write_ass(cues: list[tts.Cue], path: str, fmt: VideoFormat, family: str) -> None:
+def _write_ass(cues: list[tts.Cue], path: str, fmt: VideoFormat, family: str,
+               scale: float = 1.0) -> None:
     w, h = fmt.width, fmt.height
-    size = 78 if fmt.vertical else 62
+    size = int((78 if fmt.vertical else 62) * scale)
     margin_v = int(h * 0.27) if fmt.vertical else 64
     header = f"""[Script Info]
 ScriptType: v4.00+
@@ -129,14 +133,18 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
     scenes = script.get("scenes") or []
     if not scenes:
         raise ValueError("대본에 scenes가 없습니다.")
-    font_path = find_font(opts.font)
+    preset = opts.preset
+    voice = opts.voice or preset.voice
+    rate = opts.rate or preset.rate
+    pitch = opts.pitch or preset.pitch
+    font_path = find_font(opts.font, preset.preferred_fonts)
     family = ImageFont.truetype(font_path, 20).getname()[0]
 
     os.makedirs(out_dir, exist_ok=True)
     work = os.path.join(out_dir, "work")
     os.makedirs(work, exist_ok=True)
 
-    max_chars = 16 if fmt.vertical else 30
+    max_chars = (14 if fmt.vertical else 26) if preset.made_for_kids else (16 if fmt.vertical else 30)
     all_cues: list[tts.Cue] = []
     clips: list[str] = []
     offset = 0.0
@@ -148,14 +156,15 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
         print(f"[{n}/{total:02d}] {scene.get('caption') or narration[:20]}")
 
         audio = os.path.join(work, f"voice_{n}.mp3")
-        dur, cues = tts.synthesize(narration or "…", audio, opts.tts_engine, opts.voice, opts.rate)
+        dur, cues = tts.synthesize(narration or "…", audio, opts.tts_engine, voice, rate, pitch)
         clip_dur = dur + TAIL_PAD
 
         bg = _find_media(scene, i, script_dir)
         if bg is None:
             bg = os.path.join(work, f"card_{n}.png")
             visuals.make_scene_card(bg, scene.get("caption", ""), i, total,
-                                    (fmt.width, fmt.height), font_path, fmt.vertical)
+                                    (fmt.width, fmt.height), font_path, fmt.vertical,
+                                    preset.palettes)
 
         clip = os.path.join(work, f"clip_{n}.mp4")
         _scene_clip(bg, audio, clip_dur, clip, fmt, i)
@@ -177,7 +186,8 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
     # 2) 자막 파일
     srt_path = os.path.join(out_dir, "subtitles.srt")
     _write_srt(all_cues, srt_path)
-    _write_ass(all_cues, os.path.join(work, "subs.ass"), fmt, family)
+    _write_ass(all_cues, os.path.join(work, "subs.ass"), fmt, family,
+               1.12 if preset.made_for_kids else 1.0)
     fonts_dir = os.path.join(work, "fonts")
     os.makedirs(fonts_dir, exist_ok=True)
     shutil.copy(font_path, fonts_dir)
@@ -212,7 +222,8 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
     first_media = _find_media(scenes[0], 0, script_dir)
     thumb_bg = first_media if first_media and first_media.lower().endswith(IMAGE_EXT) else None
     visuals.make_thumbnail(thumb, script.get("thumbnail_text") or script.get("title", ""),
-                           (1080, 1920) if fmt.vertical else (1280, 720), font_path, thumb_bg)
+                           (1080, 1920) if fmt.vertical else (1280, 720), font_path, thumb_bg,
+                           preset.palettes[0] if preset.made_for_kids else ((180, 20, 40), (30, 10, 60)))
 
     meta_path = os.path.join(out_dir, "metadata.txt")
     tags = script.get("tags") or []
@@ -222,6 +233,15 @@ def build_video(script: dict, script_dir: str, out_dir: str, opts: BuildOptions)
         f.write(f"제목:\n{script.get('title', '')}\n\n")
         f.write(f"설명:\n{script.get('description', '')}\n\n")
         f.write(f"태그:\n{', '.join(tags)}\n")
+        if preset.made_for_kids:
+            f.write(
+                "\n업로드 체크리스트 (어린이 영상):\n"
+                "- 시청자층: '예, 아동용으로 설정합니다' 선택 (COPPA 규정, 미설정 시 제재 위험)\n"
+                "  → 댓글, 맞춤 광고, 알림 등 일부 기능이 자동으로 꺼집니다.\n"
+                "- '변경된 콘텐츠 또는 합성 콘텐츠'(AI 생성) 항목을 실제와 혼동될 수 있으면 '예'로 표시\n"
+                "- 제목·썸네일은 내용 그대로 (자극적인 낚시 문구 금지)\n"
+                "- 업로드 전 대본 내용이 사실인지, 아이가 따라 하면 위험한 장면은 없는지 확인\n"
+            )
 
     if not opts.keep_work:
         shutil.rmtree(work, ignore_errors=True)
