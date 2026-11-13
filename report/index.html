@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>최근 3년 상한가 종목 분석</title>
+<style>
+.viz-root{color-scheme:light;--surface-1:#fcfcfb;--page:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;
+--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);--series-1:#2a78d6;--series-2:#eb6834;
+--good:#006300;--bad:#d03b3b}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .viz-root{color-scheme:dark;--surface-1:#1a1a19;
+--page:#0d0d0d;--text-primary:#f0efec;--text-secondary:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
+--series-1:#3987e5;--series-2:#d95926;--good:#0ca30c;--bad:#e66767}}
+:root[data-theme="dark"] .viz-root{color-scheme:dark;--surface-1:#1a1a19;--page:#0d0d0d;--text-primary:#f0efec;
+--text-secondary:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--series-1:#3987e5;--series-2:#d95926;
+--good:#0ca30c;--bad:#e66767}
+*{box-sizing:border-box}
+body{margin:0}
+.viz-root{background:var(--page);color:var(--text-primary);font:15px/1.6 system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;min-height:100vh}
+main{max-width:1040px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:28px;margin:0 0 4px} h2{font-size:20px;margin:40px 0 8px} h3{font-size:16px;margin:20px 0 6px}
+.sub{color:var(--text-secondary);margin:0 0 20px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:14px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.tile .v{font-size:28px;font-weight:650} .tile .l{color:var(--text-secondary);font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+th{color:var(--text-secondary);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{color:var(--muted);font-size:12px;margin-left:6px}
+.scroll{overflow-x:auto}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--text-secondary);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.note{color:var(--text-secondary);font-size:13px}
+ul.k li{margin:6px 0}
+.tip{position:fixed;pointer-events:none;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border);
+border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none;z-index:9;white-space:nowrap}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit}
+svg .lab{fill:var(--text-secondary);font-size:12px}
+.callout{border-left:3px solid var(--series-1);padding:4px 0 4px 14px;margin:12px 0}
+</style></head>
+<body><div class="viz-root"><main>
+<h1>최근 3년 상한가 종목 분석</h1>
+<p class="sub">2023-11-13 ~ 2026-11-13 · 코스피·코스닥 현재 상장 2,675개 종목 · 거래일 731일</p>
+
+<div class="tiles">
+ <div class="tile"><div class="v">4,605건</div><div class="l">상한가 마감 횟수 (3년)</div></div>
+ <div class="tile"><div class="v">1,423개</div><div class="l">한 번 이상 상한가 간 종목 (전체의 53%)</div></div>
+ <div class="tile"><div class="v">5개</div><div class="l">하루 평균(중앙값) 상한가 종목 수</div></div>
+ <div class="tile"><div class="v">75%</div><div class="l">코스닥 비중</div></div>
+ <div class="tile"><div class="v">32%</div><div class="l">20거래일 뒤 상한가 종가보다 높은 비율</div></div>
+</div>
+
+<h2>핵심 요약</h2>
+<div class="card"><ul class="k">
+<li><b>상한가는 점점 흔해졌습니다.</b> 1년차 996건 → 2년차 1,291건 → 3년차 2,318건. 2026년 들어 월 200건 이상이 일상이 됐습니다.</li>
+<li><b>작고 싼 종목의 일입니다.</b> 시가총액 500억 미만 종목은 평소 거래일 비중보다 상한가가 1.6배 많고, 5조 이상은 0.24배에 그칩니다. 상한가 종목의 주가 중앙값은 5,000원으로 시장 전체(7,070원)보다 낮습니다.</li>
+<li><b>많이 빠진 종목에서 터집니다.</b> 상한가 직전 52주 고점 대비 하락률 중앙값은 -43%로 시장 평균(-34%)보다 깊습니다. 고점 대비 -70% 이하 종목의 비중이 평소의 약 3.4배입니다.</li>
+<li><b>거래량이 먼저 터집니다.</b> 상한가 당일 거래량은 직전 20일 평균의 중앙값 8.8배입니다.</li>
+<li><b>섹터는 IT·반도체가 1위</b>(1,416건)지만, 종목 수로 나눈 빈도는 섹터 간 차이가 생각보다 작습니다. 상한가는 특정 업종보다 <b>테마와 개별 재료</b>의 문제입니다.</li>
+<li><b>상한가 다음 날은 대체로 갭 상승으로 시작</b>(시가 상승 확률 77%)하지만, <b>20거래일 뒤에는 68%가 상한가 종가보다 낮습니다</b> (중앙값 -12.1%). 다음 날 또 상한가를 갈 확률은 15%입니다.</li>
+</ul></div>
+
+<h2>1. 얼마나 많았나</h2>
+<div class="card">
+<h3>월별 상한가 마감 횟수</h3>
+<div class="legend"><span><i style="background:var(--series-1)"></i>코스닥</span><span><i style="background:var(--series-2)"></i>코스피</span></div>
+<div id="c-month"></div>
+<p class="note">가장 많았던 날: 2026-07-31 (27건), 2026-05-13 (26건), 2026-07-01 (24건), 2026-04-15 (24건), 2024-12-04 (22건). 2024년 12월(계엄 직후 급반등), 2025년 4월, 2026년 상반기에 몰렸습니다.</p>
+</div>
+<div class="card scroll"><table>
+<tr><th>기간</th><th class=n>코스피</th><th class=n>코스닥</th><th class=n>합계</th><th class=n>종목 수</th></tr>
+<tr><td>1년차 (23.11~24.11)</td><td class=n>274</td><td class=n>722</td><td class=n><b>996</b></td><td class=n>578</td></tr><tr><td>2년차 (24.11~25.11)</td><td class=n>279</td><td class=n>1,012</td><td class=n><b>1,291</b></td><td class=n>696</td></tr><tr><td>3년차 (25.11~26.11)</td><td class=n>606</td><td class=n>1,712</td><td class=n><b>2,318</b></td><td class=n>942</td></tr>
+</table>
+<p class="note">우선주 상한가 348건 포함 (전체의 8%). 종가가 아닌 장중에 상한가를 터치한 경우는 7,748건이고, 그중 59%만 상한가로 마감했습니다.</p>
+</div>
+
+<h2>2. 섹터별 분류</h2>
+<div class="card">
+<h3>섹터별 상한가 횟수</h3>
+<div id="c-sector"></div>
+<p class="note">막대 오른쪽 숫자는 상한가 횟수이고, 마우스를 올리면 종목 100개당 빈도와 비율이 나옵니다.</p>
+</div>
+<div class="card scroll"><table>
+<tr><th>섹터</th><th class=n>상한가</th><th class=n>종목 (상한가/전체)</th><th class=n>경험 비율</th><th class=n>100종목당</th><th class=n>코스닥 비중</th><th class=n>연차별 추이</th><th class=n>다음날 평균</th><th class=n>20일 후 중앙값</th></tr>
+<tr><td>IT·반도체·전자</td><td class=n>1,416</td><td class=n>445/672</td><td class=n>66%</td><td class=n>211</td><td class=n>91%</td><td class=n>266 → 366 → 784</td><td class=n>+3.1%</td><td class=n>-11.2%</td></tr><tr><td>산업재·건설·기계</td><td class=n>843</td><td class=n>264/489</td><td class=n>54%</td><td class=n>172</td><td class=n>59%</td><td class=n>166 → 217 → 460</td><td class=n>+4.3%</td><td class=n>-12.3%</td></tr><tr><td>헬스케어·바이오</td><td class=n>617</td><td class=n>195/345</td><td class=n>57%</td><td class=n>179</td><td class=n>88%</td><td class=n>175 → 181 → 261</td><td class=n>+3.2%</td><td class=n>-12.8%</td></tr><tr><td>경기소비재</td><td class=n>532</td><td class=n>158/324</td><td class=n>49%</td><td class=n>164</td><td class=n>61%</td><td class=n>101 → 174 → 257</td><td class=n>+4.6%</td><td class=n>-12.5%</td></tr><tr><td>소재·화학</td><td class=n>397</td><td class=n>130/263</td><td class=n>49%</td><td class=n>151</td><td class=n>60%</td><td class=n>74 → 114 → 209</td><td class=n>+2.6%</td><td class=n>-13.6%</td></tr><tr><td>통신·미디어·게임</td><td class=n>273</td><td class=n>80/145</td><td class=n>55%</td><td class=n>188</td><td class=n>78%</td><td class=n>71 → 104 → 98</td><td class=n>+3.1%</td><td class=n>-12.0%</td></tr><tr><td>필수소비재</td><td class=n>251</td><td class=n>79/179</td><td class=n>44%</td><td class=n>140</td><td class=n>69%</td><td class=n>68 → 70 → 113</td><td class=n>+1.8%</td><td class=n>-13.0%</td></tr><tr><td>금융</td><td class=n>184</td><td class=n>49/175</td><td class=n>28%</td><td class=n>105</td><td class=n>61%</td><td class=n>42 → 52 → 90</td><td class=n>+2.4%</td><td class=n>-11.7%</td></tr><tr><td>유틸리티</td><td class=n>53</td><td class=n>12/20</td><td class=n>60%</td><td class=n>265</td><td class=n>66%</td><td class=n>25 → 5 → 23</td><td class=n>+6.2%</td><td class=n>-11.0%</td></tr><tr><td>부동산</td><td class=n>20</td><td class=n>6/32</td><td class=n>19%</td><td class=n>62</td><td class=n>20%</td><td class=n>1 → 5 → 14</td><td class=n>+5.7%</td><td class=n>-13.8%</td></tr><tr><td>에너지</td><td class=n>18</td><td class=n>4/15</td><td class=n>27%</td><td class=n>120</td><td class=n>78%</td><td class=n>7 → 3 → 8</td><td class=n>+6.1%</td><td class=n>-14.6%</td></tr>
+</table>
+<p class="note">섹터는 Yahoo Finance 분류(GICS 유사) 기준입니다. 국내 테마 분류(2차전지, 원전, 방산 등)와는 다릅니다.</p>
+</div>
+<div class="card"><ul class="k">
+<li><b>IT·반도체·전자</b>: 3년차에 784건으로 2배 넘게 늘었습니다. AI·반도체·광통신·로봇 테마가 이끌었고, 90%가 코스닥입니다.</li>
+<li><b>산업재·건설·기계</b>: 3년차 460건으로 가장 가파르게 늘었습니다(2년차 대비 2.1배). 전선·전력기기, 원전, 방산, 건설(정책 메가프로젝트), 운송이 포함됩니다. 금호건설이 여기에 속합니다.</li>
+<li><b>헬스케어·바이오</b>: 매년 꾸준히 170~260건입니다. 기술이전, 임상 결과처럼 개별 재료로 움직입니다.</li>
+<li><b>금융·부동산</b>: 종목 대비 빈도가 가장 낮습니다. 금융은 증권주 테마(지배구조, M&A)가 대부분입니다.</li>
+</ul></div>
+
+<h2>3. 상한가 종목의 공통 특징</h2>
+<div class="card">
+<h3>시가총액: 작을수록 상한가가 잦다</h3>
+<div class="legend"><span><i style="background:var(--series-1)"></i>상한가 이벤트 비중</span><span><i style="background:var(--series-2)"></i>전체 거래일 비중 (기준선)</span></div>
+<div id="c-cap"></div>
+<p class="note">시가총액은 상한가 전날 종가 × 현재 발행주식수로 계산한 근사치입니다.</p>
+</div>
+<div class="card">
+<h3>직전 주가 위치: 52주 고점 대비 얼마나 빠져 있었나</h3>
+<div class="legend"><span><i style="background:var(--series-1)"></i>상한가 이벤트 비중</span><span><i style="background:var(--series-2)"></i>전체 거래일 비중 (기준선)</span></div>
+<div id="c-dd"></div>
+<p class="note">흥미로운 점: 고점 대비 -50% 이하 '바닥권'과 -10% 이내 '신고가 근처' 양쪽 끝에서 모두 평소보다 상한가가 많습니다. 낙폭 과대 반등형과 추세 돌파형, 두 유형이 있다는 뜻입니다.</p>
+</div>
+<div class="card scroll"><table>
+<tr><th>특징</th><th class=n>상한가 종목 (중앙값)</th><th class=n>시장 전체 (중앙값)</th></tr>
+<tr><td>52주 고점 대비 위치</td><td class=n>-43%</td><td class=n>-34%</td></tr>
+<tr><td>직전 20일 수익률</td><td class=n>+4.2% (상위 25%는 +26% 이상)</td><td class=n>-1.1%</td></tr>
+<tr><td>당일 거래량 / 20일 평균</td><td class=n>8.8배</td><td class=n>약 1배</td></tr>
+<tr><td>주가</td><td class=n>5,000원</td><td class=n>7,070원</td></tr>
+</table>
+<p class="note">직전 20일 수익률의 평균은 +18%로 중앙값보다 훨씬 높습니다. 이미 달리던 테마주가 한 번 더 상한가를 가는 경우가 평균을 끌어올립니다.</p>
+</div>
+
+<h2>4. 상한가 이후 주가는?</h2>
+<div class="card scroll"><table>
+<tr><th>상한가 종가 기준</th><th class=n>중앙값</th><th class=n>평균</th><th class=n>상승 확률</th><th class=n>하위 10% ~ 상위 10%</th></tr>
+<tr><td>다음날 시가 (갭)</td><td class=n>+6.3%</td><td class=n>+7.8%</td><td class=n>77%</td><td class=n>-3% ~ +23%</td></tr><tr><td>다음날 종가</td><td class=n>+0.5%</td><td class=n>+3.4%</td><td class=n>52%</td><td class=n>-13% ~ +30%</td></tr><tr><td>5거래일 후</td><td class=n>-4.3%</td><td class=n>+3.4%</td><td class=n>42%</td><td class=n>-23% ~ +34%</td></tr><tr><td>20거래일 후</td><td class=n>-12.1%</td><td class=n>+0.6%</td><td class=n>32%</td><td class=n>-36% ~ +40%</td></tr>
+</table>
+<p class="note">평균이 중앙값보다 크게 높은 건 소수 종목의 대박(연상) 때문입니다. 전형적인 종목은 시간이 지날수록 빠집니다.</p>
+</div>
+<div class="card">
+<div class="tiles">
+ <div class="tile"><div class="v">15%</div><div class="l">다음 날도 상한가 마감</div></div>
+ <div class="tile"><div class="v">24%</div><div class="l">다음 날 장중 상한가 터치</div></div>
+ <div class="tile"><div class="v">28%</div><div class="l">2연상 종목이 3연상 갈 확률</div></div>
+ <div class="tile"><div class="v">+18%</div><div class="l">다음 날 장중 고가 (중앙값)</div></div>
+</div>
+<h3>연속 상한가 길이</h3>
+<table style="max-width:380px"><tr><th>연속</th><th class=n>횟수</th><th class=n>비중</th></tr><tr><td>1연상</td><td class=n>3,434</td><td class=n>87.5%</td></tr><tr><td>2연상</td><td class=n>367</td><td class=n>9.3%</td></tr><tr><td>3연상</td><td class=n>84</td><td class=n>2.1%</td></tr><tr><td>4연상</td><td class=n>23</td><td class=n>0.6%</td></tr><tr><td>5연상</td><td class=n>16</td><td class=n>0.4%</td></tr><tr><td>6연상</td><td class=n>1</td><td class=n>0.0%</td></tr><tr><td>7연상</td><td class=n>1</td><td class=n>0.0%</td></tr></table>
+</div>
+<div class="callout"><b>시사점:</b> 상한가 다음 날 아침에는 대부분 갭 상승으로 시작하고, 장중 고가 중앙값도 +18% 수준입니다. 그런데 종가 기준으로는 승률이 반반이고, 한 달 뒤에는 3분의 2 이상이 빠져 있습니다. <b>상한가를 따라 사는 것보다, 상한가 다음 날을 매도 기회로 보는 게 통계적으로 유리합니다.</b></div>
+
+<h2>5. 상한가 단골 종목 (보통주)</h2>
+<div class="card scroll"><table>
+<tr><th class=n>#</th><th>종목</th><th>시장</th><th>섹터</th><th class=n>상한가</th><th class=n>시총 중앙값</th><th class=n>처음</th><th class=n>최근</th></tr>
+<tr><td class=n>1</td><td>BL Pharmtech Corp.<span class=code>065170</span></td><td>KOSDAQ</td><td>필수소비재</td><td class=n><b>27</b></td><td class=n>498억</td><td class=n>2024-01-30</td><td class=n>2026-09-11</td></tr><tr><td class=n>2</td><td>KOREA ADVANCED MATERIALS Co., Ltd.<span class=code>062970</span></td><td>KOSDAQ</td><td>IT·반도체·전자</td><td class=n><b>22</b></td><td class=n>1,029억</td><td class=n>2024-03-14</td><td class=n>2026-09-15</td></tr><tr><td class=n>3</td><td>Sangji Construction, Inc.<span class=code>042940</span></td><td>KOSDAQ</td><td>산업재·건설·기계</td><td class=n><b>21</b></td><td class=n>561억</td><td class=n>2024-03-14</td><td class=n>2026-10-29</td></tr><tr><td class=n>4</td><td>HYUNGJI INNOVATION & CREATIVE Co.,Ltd<span class=code>011080</span></td><td>KOSDAQ</td><td>경기소비재</td><td class=n><b>21</b></td><td class=n>359억</td><td class=n>2024-09-24</td><td class=n>2026-10-30</td></tr><tr><td class=n>5</td><td>Cellid, Co., Ltd.<span class=code>299660</span></td><td>KOSDAQ</td><td>헬스케어·바이오</td><td class=n><b>20</b></td><td class=n>1,194억</td><td class=n>2024-07-23</td><td class=n>2026-09-22</td></tr><tr><td class=n>6</td><td>Inno Instrument Inc.<span class=code>215790</span></td><td>KOSDAQ</td><td>IT·반도체·전자</td><td class=n><b>19</b></td><td class=n>301억</td><td class=n>2025-10-16</td><td class=n>2026-08-05</td></tr><tr><td class=n>7</td><td>Thumbage Co., Ltd.<span class=code>208640</span></td><td>KOSDAQ</td><td>통신·미디어·게임</td><td class=n><b>18</b></td><td class=n>289억</td><td class=n>2024-11-14</td><td class=n>2026-11-10</td></tr><tr><td class=n>8</td><td>Lightron Fiber-Optic Devices Inc.<span class=code>069540</span></td><td>KOSDAQ</td><td>IT·반도체·전자</td><td class=n><b>18</b></td><td class=n>2,223억</td><td class=n>2024-03-04</td><td class=n>2026-10-28</td></tr><tr><td class=n>9</td><td>PhionX<span class=code>900100</span></td><td>KOSDAQ</td><td>산업재·건설·기계</td><td class=n><b>17</b></td><td class=n>44억</td><td class=n>2024-07-02</td><td class=n>2026-11-09</td></tr><tr><td class=n>10</td><td>Dongyang Express Corp.<span class=code>084670</span></td><td>KOSPI</td><td>산업재·건설·기계</td><td class=n><b>17</b></td><td class=n>763억</td><td class=n>2025-11-19</td><td class=n>2026-10-08</td></tr><tr><td class=n>11</td><td>Chunil Express Co., Ltd.<span class=code>000650</span></td><td>KOSPI</td><td>산업재·건설·기계</td><td class=n><b>16</b></td><td class=n>2,232억</td><td class=n>2024-01-31</td><td class=n>2026-10-14</td></tr><tr><td class=n>12</td><td>YeSUN Tech Co.,Ltd.<span class=code>250930</span></td><td>KOSDAQ</td><td>소재·화학</td><td class=n><b>16</b></td><td class=n>100억</td><td class=n>2024-08-06</td><td class=n>2026-11-11</td></tr><tr><td class=n>13</td><td>Vessel Co., Ltd.<span class=code>177350</span></td><td>KOSDAQ</td><td>IT·반도체·전자</td><td class=n><b>15</b></td><td class=n>245억</td><td class=n>2023-12-08</td><td class=n>2026-11-12</td></tr><tr><td class=n>14</td><td>Kumho Electric, Inc.<span class=code>001210</span></td><td>KOSPI</td><td>산업재·건설·기계</td><td class=n><b>15</b></td><td class=n>498억</td><td class=n>2024-02-26</td><td class=n>2026-10-12</td></tr><tr><td class=n>15</td><td>ZGOO Holdings Co., Ltd.<span class=code>221800</span></td><td>KOSDAQ</td><td>헬스케어·바이오</td><td class=n><b>14</b></td><td class=n>966억</td><td class=n>2025-01-08</td><td class=n>2026-08-28</td></tr><tr><td class=n>16</td><td>Exion Group Company Limited<span class=code>069920</span></td><td>KOSDAQ</td><td>경기소비재</td><td class=n><b>14</b></td><td class=n>204억</td><td class=n>2024-06-10</td><td class=n>2026-10-02</td></tr><tr><td class=n>17</td><td>Organic Tea Cosmetics Holdings Company Limited<span class=code>900300</span></td><td>KOSDAQ</td><td>필수소비재</td><td class=n><b>14</b></td><td class=n>536억</td><td class=n>2024-05-28</td><td class=n>2026-11-09</td></tr><tr><td class=n>18</td><td>Seosan Corporation<span class=code>079650</span></td><td>KOSDAQ</td><td>소재·화학</td><td class=n><b>14</b></td><td class=n>738억</td><td class=n>2026-06-10</td><td class=n>2026-10-13</td></tr><tr><td class=n>19</td><td>NRobotics Co.,Ltd.<span class=code>138360</span></td><td>KOSDAQ</td><td>소재·화학</td><td class=n><b>14</b></td><td class=n>1,017억</td><td class=n>2023-11-16</td><td class=n>2026-07-22</td></tr><tr><td class=n>20</td><td>4by4 Inc<span class=code>389140</span></td><td>KOSDAQ</td><td>통신·미디어·게임</td><td class=n><b>13</b></td><td class=n>1,290억</td><td class=n>2024-01-09</td><td class=n>2026-02-10</td></tr>
+</table>
+<p class="note">종목명은 Yahoo Finance 영문명입니다. 우선주까지 포함하면 1위는 금호건설우(002995, 29회)이고, 태영건설우·한화갤러리아우 같은 우선주가 상위권에 많습니다. 금호건설 보통주는 3년간 10회(2026년 6~8월에 9회, 오늘 11/13이 10번째)입니다.</p>
+</div>
+<div class="card"><ul class="k">
+<li>상한가를 1번만 간 종목은 514개, 5번 이상 간 종목은 302개입니다. <b>한 번 간 종목이 또 갑니다.</b></li>
+<li>단골 종목은 대부분 시가총액 1,000억 원 안팎의 소형주입니다. 우선주는 유통 주식이 적어 테마가 붙으면 쉽게 연속 상한가를 갑니다.</li>
+</ul></div>
+
+<h2>6. 분석 방법과 한계</h2>
+<div class="card note">
+<ul>
+<li><b>데이터:</b> Yahoo Finance 일봉(종가·고가·거래량)으로 현재 코스피·코스닥 상장 2,675개 종목(우선주 포함, ETF 제외)을 봤습니다.</li>
+<li><b>상한가 정의:</b> 종가가 전일 종가 대비 +29.5% 이상(호가 단위 반올림 감안). +32%를 넘는 55건(상장 첫날, 감자 후 재상장 등 기준가가 바뀐 날이나 데이터 오류)은 제외했습니다.</li>
+<li><b>생존 편향:</b> 이 기간에 상장폐지된 종목은 빠져 있습니다. 그래서 실제 상한가 수보다 조금 적고(공개 기사의 월별 수치보다 약 3~5% 적음), 이후 수익률은 실제보다 좋게 나왔을 가능성이 있습니다.</li>
+<li><b>시가총액:</b> 현재 발행주식수 기준 근사치라서 유상증자나 감자가 많았던 종목은 오차가 있습니다.</li>
+<li>이 자료는 과거 통계이고 투자 권유가 아닙니다.</li>
+</ul></div>
+</main>
+<div class="tip" id="tip"></div>
+</div>
+<script>
+const D={"months": [{"k": "2023-11", "KOSDAQ": 37, "KOSPI": 34}, {"k": "2023-12", "KOSDAQ": 79, "KOSPI": 45}, {"k": "2024-01", "KOSDAQ": 69, "KOSPI": 32}, {"k": "2024-02", "KOSDAQ": 58, "KOSPI": 23}, {"k": "2024-03", "KOSDAQ": 60, "KOSPI": 16}, {"k": "2024-04", "KOSDAQ": 45, "KOSPI": 16}, {"k": "2024-05", "KOSDAQ": 53, "KOSPI": 15}, {"k": "2024-06", "KOSDAQ": 38, "KOSPI": 34}, {"k": "2024-07", "KOSDAQ": 49, "KOSPI": 15}, {"k": "2024-08", "KOSDAQ": 85, "KOSPI": 17}, {"k": "2024-09", "KOSDAQ": 72, "KOSPI": 10}, {"k": "2024-10", "KOSDAQ": 53, "KOSPI": 12}, {"k": "2024-11", "KOSDAQ": 91, "KOSPI": 19}, {"k": "2024-12", "KOSDAQ": 127, "KOSPI": 43}, {"k": "2025-01", "KOSDAQ": 74, "KOSPI": 14}, {"k": "2025-02", "KOSDAQ": 77, "KOSPI": 11}, {"k": "2025-03", "KOSDAQ": 53, "KOSPI": 19}, {"k": "2025-04", "KOSDAQ": 178, "KOSPI": 59}, {"k": "2025-05", "KOSDAQ": 82, "KOSPI": 33}, {"k": "2025-06", "KOSDAQ": 83, "KOSPI": 23}, {"k": "2025-07", "KOSDAQ": 78, "KOSPI": 14}, {"k": "2025-08", "KOSDAQ": 43, "KOSPI": 6}, {"k": "2025-09", "KOSDAQ": 56, "KOSPI": 18}, {"k": "2025-10", "KOSDAQ": 58, "KOSPI": 18}, {"k": "2025-11", "KOSDAQ": 61, "KOSPI": 30}, {"k": "2025-12", "KOSDAQ": 89, "KOSPI": 80}, {"k": "2026-01", "KOSDAQ": 188, "KOSPI": 38}, {"k": "2026-02", "KOSDAQ": 141, "KOSPI": 41}, {"k": "2026-03", "KOSDAQ": 176, "KOSPI": 49}, {"k": "2026-04", "KOSDAQ": 220, "KOSPI": 57}, {"k": "2026-05", "KOSDAQ": 141, "KOSPI": 65}, {"k": "2026-06", "KOSDAQ": 161, "KOSPI": 65}, {"k": "2026-07", "KOSDAQ": 177, "KOSPI": 70}, {"k": "2026-08", "KOSDAQ": 136, "KOSPI": 35}, {"k": "2026-09", "KOSDAQ": 109, "KOSPI": 18}, {"k": "2026-10", "KOSDAQ": 92, "KOSPI": 21}, {"k": "2026-11", "KOSDAQ": 57, "KOSPI": 44}], "sectors": [{"name": "IT·반도체·전자", "events": 1416, "stocks": 445, "universe": 672, "hit": 0.6622, "per100": 210.7143, "kq": 0.9096, "next": 0.0315, "f20": -0.1116, "y": {"1년차 (23.11~24.11)": 266, "2년차 (24.11~25.11)": 366, "3년차 (25.11~26.11)": 784}}, {"name": "산업재·건설·기계", "events": 843, "stocks": 264, "universe": 489, "hit": 0.5399, "per100": 172.3926, "kq": 0.5884, "next": 0.0431, "f20": -0.123, "y": {"1년차 (23.11~24.11)": 166, "2년차 (24.11~25.11)": 217, "3년차 (25.11~26.11)": 460}}, {"name": "헬스케어·바이오", "events": 617, "stocks": 195, "universe": 345, "hit": 0.5652, "per100": 178.8406, "kq": 0.8817, "next": 0.0319, "f20": -0.1285, "y": {"1년차 (23.11~24.11)": 175, "2년차 (24.11~25.11)": 181, "3년차 (25.11~26.11)": 261}}, {"name": "경기소비재", "events": 532, "stocks": 158, "universe": 324, "hit": 0.4877, "per100": 164.1975, "kq": 0.6109, "next": 0.0461, "f20": -0.1246, "y": {"1년차 (23.11~24.11)": 101, "2년차 (24.11~25.11)": 174, "3년차 (25.11~26.11)": 257}}, {"name": "소재·화학", "events": 397, "stocks": 130, "universe": 263, "hit": 0.4943, "per100": 150.9506, "kq": 0.6045, "next": 0.0265, "f20": -0.1364, "y": {"1년차 (23.11~24.11)": 74, "2년차 (24.11~25.11)": 114, "3년차 (25.11~26.11)": 209}}, {"name": "통신·미디어·게임", "events": 273, "stocks": 80, "universe": 145, "hit": 0.5517, "per100": 188.2759, "kq": 0.7839, "next": 0.0314, "f20": -0.12, "y": {"1년차 (23.11~24.11)": 71, "2년차 (24.11~25.11)": 104, "3년차 (25.11~26.11)": 98}}, {"name": "필수소비재", "events": 251, "stocks": 79, "universe": 179, "hit": 0.4413, "per100": 140.2235, "kq": 0.6892, "next": 0.0185, "f20": -0.1295, "y": {"1년차 (23.11~24.11)": 68, "2년차 (24.11~25.11)": 70, "3년차 (25.11~26.11)": 113}}, {"name": "금융", "events": 184, "stocks": 49, "universe": 175, "hit": 0.28, "per100": 105.1429, "kq": 0.6141, "next": 0.0244, "f20": -0.1168, "y": {"1년차 (23.11~24.11)": 42, "2년차 (24.11~25.11)": 52, "3년차 (25.11~26.11)": 90}}, {"name": "유틸리티", "events": 53, "stocks": 12, "universe": 20, "hit": 0.6, "per100": 265.0, "kq": 0.6604, "next": 0.0621, "f20": -0.1098, "y": {"1년차 (23.11~24.11)": 25, "2년차 (24.11~25.11)": 5, "3년차 (25.11~26.11)": 23}}, {"name": "부동산", "events": 20, "stocks": 6, "universe": 32, "hit": 0.1875, "per100": 62.5, "kq": 0.2, "next": 0.0566, "f20": -0.1379, "y": {"1년차 (23.11~24.11)": 1, "2년차 (24.11~25.11)": 5, "3년차 (25.11~26.11)": 14}}, {"name": "에너지", "events": 18, "stocks": 4, "universe": 15, "hit": 0.2667, "per100": 120.0, "kq": 0.7778, "next": 0.061, "f20": -0.1465, "y": {"1년차 (23.11~24.11)": 7, "2년차 (24.11~25.11)": 3, "3년차 (25.11~26.11)": 8}}], "caps": [{"k": "500억 미만", "ev": 0.3178, "all": 0.196, "lift": 1.6213, "n": 1443}, {"k": "500억~1천억", "ev": 0.2596, "all": 0.2286, "lift": 1.1359, "n": 1179}, {"k": "1천억~3천억", "ev": 0.2671, "all": 0.3051, "lift": 0.8754, "n": 1213}, {"k": "3천억~1조", "ev": 0.1055, "all": 0.1557, "lift": 0.6773, "n": 479}, {"k": "1조~5조", "ev": 0.0414, "all": 0.0786, "lift": 0.527, "n": 188}, {"k": "5조 이상", "ev": 0.0086, "all": 0.036, "lift": 0.2386, "n": 39}], "dds": [{"k": "-70% 이하", "ev": 0.1487, "all": 0.0433}, {"k": "-70~-50%", "ev": 0.2586, "all": 0.178}, {"k": "-50~-30%", "ev": 0.2661, "all": 0.3509}, {"k": "-30~-10%", "ev": 0.2112, "all": 0.3331}, {"k": "-10~0% (신고가 근처)", "ev": 0.1153, "all": 0.0947}]};
+const css=n=>getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(n).trim();
+const tip=document.getElementById('tip');
+function showTip(e,h){tip.innerHTML=h;tip.style.display='block';const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8);tip.style.left=x+'px';tip.style.top=(e.clientY+14)+'px'}
+function hideTip(){tip.style.display='none'}
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+const pct=(v,d=1)=>(v*100).toFixed(d)+'%';
+function bar(x,y,w,h,fill,p,r=4){ // rounded top only
+  if(h<=0)return;r=Math.min(r,w/2,h);
+  return el('path',{d:`M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`,fill},p)}
+function hbar(x,y,w,h,fill,p,r=4){if(w<=0)return;r=Math.min(r,h/2,w);
+  return el('path',{d:`M${x},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h-r}Q${x+w},${y+h} ${x+w-r},${y+h}H${x}Z`,fill},p)}
+
+function monthChart(){
+  const box=document.getElementById('c-month');box.innerHTML='';
+  const W=box.clientWidth,H=260,m={l:36,r:8,t:10,b:28};
+  const s=el('svg',{width:W,height:H},box);
+  const data=D.months,max=Math.ceil(Math.max(...data.map(d=>d.KOSDAQ+d.KOSPI))/50)*50;
+  const iw=W-m.l-m.r,ih=H-m.t-m.b,bw=iw/data.length,y=v=>m.t+ih-v/max*ih;
+  for(let v=0;v<=max;v+=50){el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:css(v?'--grid':'--axis')},s);
+    el('text',{x:m.l-6,y:y(v)+4,'text-anchor':'end'},s).textContent=v}
+  data.forEach((d,i)=>{const x=m.l+i*bw+1,w=Math.max(bw-2,2);
+    const hK=d.KOSDAQ/max*ih,hP=d.KOSPI/max*ih,base=m.t+ih;
+    // KOSDAQ bottom (square), KOSPI top (rounded), 2px gap
+    el('rect',{x,y:base-hK,width:w,height:hK,fill:css('--series-1')},s);
+    if(hP>2)bar(x,base-hK-hP,w,hP-2,css('--series-2'),s);
+    if(d.k.endsWith('-01')||i===0)el('text',{x:x+w/2,y:H-8,'text-anchor':'middle'},s).textContent=d.k.slice(2).replace('-','.');
+    const hit=el('rect',{x:m.l+i*bw,y:m.t,width:bw,height:ih,fill:'transparent'},s);
+    hit.addEventListener('mousemove',e=>showTip(e,`<b>${d.k}</b><br>코스닥 ${d.KOSDAQ}건<br>코스피 ${d.KOSPI}건<br>합계 <b>${d.KOSDAQ+d.KOSPI}건</b>`));
+    hit.addEventListener('mouseleave',hideTip)});
+}
+function sectorChart(){
+  const box=document.getElementById('c-sector');box.innerHTML='';
+  const data=D.sectors,W=box.clientWidth,row=28,m={l:130,r:56,t:4,b:4},H=m.t+m.b+row*data.length;
+  const s=el('svg',{width:W,height:H},box),max=Math.max(...data.map(d=>d.events)),iw=W-m.l-m.r;
+  data.forEach((d,i)=>{const y0=m.t+i*row;
+    el('text',{x:m.l-8,y:y0+row/2+4,'text-anchor':'end',class:'lab'},s).textContent=d.name;
+    hbar(m.l,y0+6,d.events/max*iw,row-12,css('--series-1'),s);
+    el('text',{x:m.l+d.events/max*iw+6,y:y0+row/2+4,class:'lab'},s).textContent=d.events.toLocaleString();
+    const hit=el('rect',{x:0,y:y0,width:W,height:row,fill:'transparent'},s);
+    hit.addEventListener('mousemove',e=>showTip(e,`<b>${d.name}</b><br>상한가 ${d.events.toLocaleString()}건<br>경험 종목 ${d.stocks}/${d.universe} (${pct(d.hit,0)})<br>100종목당 ${d.per100.toFixed(0)}건 · 코스닥 ${pct(d.kq,0)}`));
+    hit.addEventListener('mouseleave',hideTip)});
+}
+function pairChart(id,data){
+  const box=document.getElementById(id);box.innerHTML='';
+  const W=box.clientWidth,H=240,m={l:36,r:8,t:10,b:40},s=el('svg',{width:W,height:H},box);
+  const max=Math.ceil(Math.max(...data.flatMap(d=>[d.ev,d.all]))*10)/10,iw=W-m.l-m.r,ih=H-m.t-m.b,y=v=>m.t+ih-v/max*ih;
+  for(let v=0;v<=max+1e-9;v+=0.1){el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:css(v?'--grid':'--axis')},s);
+    el('text',{x:m.l-6,y:y(v)+4,'text-anchor':'end'},s).textContent=Math.round(v*100)+'%'}
+  const gw=iw/data.length,bw=Math.min(36,(gw-16)/2);
+  data.forEach((d,i)=>{const cx=m.l+gw*i+gw/2;
+    bar(cx-bw-1,y(d.ev),bw,m.t+ih-y(d.ev),css('--series-1'),s);
+    bar(cx+1,y(d.all),bw,m.t+ih-y(d.all),css('--series-2'),s);
+    el('text',{x:cx,y:H-22,'text-anchor':'middle',class:'lab'},s).textContent=d.k;
+    el('text',{x:cx,y:H-6,'text-anchor':'middle'},s).textContent=(d.ev/d.all).toFixed(2)+'배';
+    const hit=el('rect',{x:m.l+gw*i,y:m.t,width:gw,height:ih,fill:'transparent'},s);
+    hit.addEventListener('mousemove',e=>showTip(e,`<b>${d.k}</b><br>상한가 비중 ${pct(d.ev)}<br>전체 거래일 비중 ${pct(d.all)}<br>배율 <b>${(d.ev/d.all).toFixed(2)}배</b>`));
+    hit.addEventListener('mouseleave',hideTip)});
+}
+function draw(){monthChart();sectorChart();pairChart('c-cap',D.caps);pairChart('c-dd',D.dds)}
+draw();addEventListener('resize',draw);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+</script></body></html>

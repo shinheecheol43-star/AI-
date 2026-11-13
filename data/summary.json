@@ -1,0 +1,1164 @@
+{
+ "meta": {
+  "start": "2023-11-13",
+  "end": "2026-11-13",
+  "universe": 2675,
+  "universe_by_market": {
+   "KOSDAQ": 1754,
+   "KOSPI": 921
+  },
+  "trading_days": 731,
+  "limit_up_events": 4605,
+  "limit_up_stocks": 1423,
+  "touch_events": 7748,
+  "touch_close_ratio": 0.5943469282395457,
+  "abnormal_excluded": 55
+ },
+ "by_period_market": {
+  "1년차 (23.11~24.11)": {
+   "KOSDAQ": 722,
+   "KOSPI": 274
+  },
+  "2년차 (24.11~25.11)": {
+   "KOSDAQ": 1012,
+   "KOSPI": 279
+  },
+  "3년차 (25.11~26.11)": {
+   "KOSDAQ": 1712,
+   "KOSPI": 606
+  }
+ },
+ "stocks_by_period": {
+  "1년차 (23.11~24.11)": 578,
+  "2년차 (24.11~25.11)": 696,
+  "3년차 (25.11~26.11)": 942
+ },
+ "by_month": {
+  "2023-11": {
+   "KOSDAQ": 37,
+   "KOSPI": 34
+  },
+  "2023-12": {
+   "KOSDAQ": 79,
+   "KOSPI": 45
+  },
+  "2024-01": {
+   "KOSDAQ": 69,
+   "KOSPI": 32
+  },
+  "2024-02": {
+   "KOSDAQ": 58,
+   "KOSPI": 23
+  },
+  "2024-03": {
+   "KOSDAQ": 60,
+   "KOSPI": 16
+  },
+  "2024-04": {
+   "KOSDAQ": 45,
+   "KOSPI": 16
+  },
+  "2024-05": {
+   "KOSDAQ": 53,
+   "KOSPI": 15
+  },
+  "2024-06": {
+   "KOSDAQ": 38,
+   "KOSPI": 34
+  },
+  "2024-07": {
+   "KOSDAQ": 49,
+   "KOSPI": 15
+  },
+  "2024-08": {
+   "KOSDAQ": 85,
+   "KOSPI": 17
+  },
+  "2024-09": {
+   "KOSDAQ": 72,
+   "KOSPI": 10
+  },
+  "2024-10": {
+   "KOSDAQ": 53,
+   "KOSPI": 12
+  },
+  "2024-11": {
+   "KOSDAQ": 91,
+   "KOSPI": 19
+  },
+  "2024-12": {
+   "KOSDAQ": 127,
+   "KOSPI": 43
+  },
+  "2025-01": {
+   "KOSDAQ": 74,
+   "KOSPI": 14
+  },
+  "2025-02": {
+   "KOSDAQ": 77,
+   "KOSPI": 11
+  },
+  "2025-03": {
+   "KOSDAQ": 53,
+   "KOSPI": 19
+  },
+  "2025-04": {
+   "KOSDAQ": 178,
+   "KOSPI": 59
+  },
+  "2025-05": {
+   "KOSDAQ": 82,
+   "KOSPI": 33
+  },
+  "2025-06": {
+   "KOSDAQ": 83,
+   "KOSPI": 23
+  },
+  "2025-07": {
+   "KOSDAQ": 78,
+   "KOSPI": 14
+  },
+  "2025-08": {
+   "KOSDAQ": 43,
+   "KOSPI": 6
+  },
+  "2025-09": {
+   "KOSDAQ": 56,
+   "KOSPI": 18
+  },
+  "2025-10": {
+   "KOSDAQ": 58,
+   "KOSPI": 18
+  },
+  "2025-11": {
+   "KOSDAQ": 61,
+   "KOSPI": 30
+  },
+  "2025-12": {
+   "KOSDAQ": 89,
+   "KOSPI": 80
+  },
+  "2026-01": {
+   "KOSDAQ": 188,
+   "KOSPI": 38
+  },
+  "2026-02": {
+   "KOSDAQ": 141,
+   "KOSPI": 41
+  },
+  "2026-03": {
+   "KOSDAQ": 176,
+   "KOSPI": 49
+  },
+  "2026-04": {
+   "KOSDAQ": 220,
+   "KOSPI": 57
+  },
+  "2026-05": {
+   "KOSDAQ": 141,
+   "KOSPI": 65
+  },
+  "2026-06": {
+   "KOSDAQ": 161,
+   "KOSPI": 65
+  },
+  "2026-07": {
+   "KOSDAQ": 177,
+   "KOSPI": 70
+  },
+  "2026-08": {
+   "KOSDAQ": 136,
+   "KOSPI": 35
+  },
+  "2026-09": {
+   "KOSDAQ": 109,
+   "KOSPI": 18
+  },
+  "2026-10": {
+   "KOSDAQ": 92,
+   "KOSPI": 21
+  },
+  "2026-11": {
+   "KOSDAQ": 57,
+   "KOSPI": 44
+  }
+ },
+ "by_class": {
+  "보통주": 4257,
+  "우선주": 348
+ },
+ "by_sector": {
+  "Technology": {
+   "events": 1416,
+   "stocks": 445,
+   "universe": 672,
+   "stock_hit_rate": 0.6622,
+   "events_per_100": 210.7143,
+   "kosdaq_share": 0.9096,
+   "next_ret_mean": 0.0315,
+   "fwd_20d_median": -0.1116
+  },
+  "Industrials": {
+   "events": 843,
+   "stocks": 264,
+   "universe": 489,
+   "stock_hit_rate": 0.5399,
+   "events_per_100": 172.3926,
+   "kosdaq_share": 0.5884,
+   "next_ret_mean": 0.0431,
+   "fwd_20d_median": -0.123
+  },
+  "Healthcare": {
+   "events": 617,
+   "stocks": 195,
+   "universe": 345,
+   "stock_hit_rate": 0.5652,
+   "events_per_100": 178.8406,
+   "kosdaq_share": 0.8817,
+   "next_ret_mean": 0.0319,
+   "fwd_20d_median": -0.1285
+  },
+  "Consumer Cyclical": {
+   "events": 532,
+   "stocks": 158,
+   "universe": 324,
+   "stock_hit_rate": 0.4877,
+   "events_per_100": 164.1975,
+   "kosdaq_share": 0.6109,
+   "next_ret_mean": 0.0461,
+   "fwd_20d_median": -0.1246
+  },
+  "Basic Materials": {
+   "events": 397,
+   "stocks": 130,
+   "universe": 263,
+   "stock_hit_rate": 0.4943,
+   "events_per_100": 150.9506,
+   "kosdaq_share": 0.6045,
+   "next_ret_mean": 0.0265,
+   "fwd_20d_median": -0.1364
+  },
+  "Communication Services": {
+   "events": 273,
+   "stocks": 80,
+   "universe": 145,
+   "stock_hit_rate": 0.5517,
+   "events_per_100": 188.2759,
+   "kosdaq_share": 0.7839,
+   "next_ret_mean": 0.0314,
+   "fwd_20d_median": -0.12
+  },
+  "Consumer Defensive": {
+   "events": 251,
+   "stocks": 79,
+   "universe": 179,
+   "stock_hit_rate": 0.4413,
+   "events_per_100": 140.2235,
+   "kosdaq_share": 0.6892,
+   "next_ret_mean": 0.0185,
+   "fwd_20d_median": -0.1295
+  },
+  "Financial Services": {
+   "events": 184,
+   "stocks": 49,
+   "universe": 175,
+   "stock_hit_rate": 0.28,
+   "events_per_100": 105.1429,
+   "kosdaq_share": 0.6141,
+   "next_ret_mean": 0.0244,
+   "fwd_20d_median": -0.1168
+  },
+  "Utilities": {
+   "events": 53,
+   "stocks": 12,
+   "universe": 20,
+   "stock_hit_rate": 0.6,
+   "events_per_100": 265.0,
+   "kosdaq_share": 0.6604,
+   "next_ret_mean": 0.0621,
+   "fwd_20d_median": -0.1098
+  },
+  "Real Estate": {
+   "events": 20,
+   "stocks": 6,
+   "universe": 32,
+   "stock_hit_rate": 0.1875,
+   "events_per_100": 62.5,
+   "kosdaq_share": 0.2,
+   "next_ret_mean": 0.0566,
+   "fwd_20d_median": -0.1379
+  },
+  "Energy": {
+   "events": 18,
+   "stocks": 4,
+   "universe": 15,
+   "stock_hit_rate": 0.2667,
+   "events_per_100": 120.0,
+   "kosdaq_share": 0.7778,
+   "next_ret_mean": 0.061,
+   "fwd_20d_median": -0.1465
+  },
+  "Unknown": {
+   "events": 1,
+   "stocks": 1,
+   "universe": 16,
+   "stock_hit_rate": 0.0625,
+   "events_per_100": 6.25,
+   "kosdaq_share": NaN,
+   "next_ret_mean": -0.087,
+   "fwd_20d_median": NaN
+  }
+ },
+ "by_cap": {
+  "500억 미만": {
+   "events": 1443,
+   "all_stock_days": 356297,
+   "event_share": 0.3178,
+   "day_share": 0.196,
+   "lift": 1.6213
+  },
+  "500억~1천억": {
+   "events": 1179,
+   "all_stock_days": 415504,
+   "event_share": 0.2596,
+   "day_share": 0.2286,
+   "lift": 1.1359
+  },
+  "1천억~3천억": {
+   "events": 1213,
+   "all_stock_days": 554723,
+   "event_share": 0.2671,
+   "day_share": 0.3051,
+   "lift": 0.8754
+  },
+  "3천억~1조": {
+   "events": 479,
+   "all_stock_days": 283134,
+   "event_share": 0.1055,
+   "day_share": 0.1557,
+   "lift": 0.6773
+  },
+  "1조~5조": {
+   "events": 188,
+   "all_stock_days": 142799,
+   "event_share": 0.0414,
+   "day_share": 0.0786,
+   "lift": 0.527
+  },
+  "5조 이상": {
+   "events": 39,
+   "all_stock_days": 65438,
+   "event_share": 0.0086,
+   "day_share": 0.036,
+   "lift": 0.2386
+  }
+ },
+ "pre_features": {
+  "dd_from_high_limitup": {
+   "n": 4404,
+   "mean": -0.4242251668027172,
+   "p10": -0.7488338619955176,
+   "p25": -0.6158625523651596,
+   "p50": -0.43035206299355955,
+   "p75": -0.22541019311746768,
+   "p90": -0.08129753863766458
+  },
+  "dd_from_high_all": {
+   "n": 293770,
+   "mean": -0.3499177425234977,
+   "p10": -0.6132604829842399,
+   "p25": -0.4798488664987406,
+   "p50": -0.33700883896865835,
+   "p75": -0.20437262357414454,
+   "p90": -0.10429447852760731
+  },
+  "ret_20d_before_limitup": {
+   "n": 4508,
+   "mean": 0.18494530862064842,
+   "p10": -0.2503047404063205,
+   "p25": -0.09647336840930684,
+   "p50": 0.04194617045473281,
+   "p75": 0.2624235282318724,
+   "p90": 0.6500950633507729
+  },
+  "ret_20d_before_all": {
+   "n": 298932,
+   "mean": 0.004687692096602269,
+   "p10": -0.15343819838404676,
+   "p25": -0.07494426014594557,
+   "p50": -0.011428571428571455,
+   "p75": 0.053012048192771166,
+   "p90": 0.15999999999999992
+  },
+  "vol_ratio_limitup": {
+   "n": 4526,
+   "mean": 25.73375864084279,
+   "p10": 1.3772028121601534,
+   "p25": 3.413504965299251,
+   "p50": 8.750952027603152,
+   "p75": 24.954873141210747,
+   "p90": 63.690178747050105
+  },
+  "price_limitup": {
+   "n": 4605,
+   "mean": 12468.246693524787,
+   "p10": 1640.4,
+   "p25": 2665.0,
+   "p50": 5000.0,
+   "p75": 10250.0,
+   "p90": 21200.0
+  },
+  "price_all": {
+   "n": 300000,
+   "mean": 24809.558218548176,
+   "p10": 2060.0,
+   "p25": 3485.0,
+   "p50": 7070.0,
+   "p75": 17320.0,
+   "p90": 49750.0
+  }
+ },
+ "dd_bucket": {
+  "-70% 이하": {
+   "limitup": 0.1487,
+   "all": 0.0433
+  },
+  "-70~-50%": {
+   "limitup": 0.2586,
+   "all": 0.178
+  },
+  "-50~-30%": {
+   "limitup": 0.2661,
+   "all": 0.3509
+  },
+  "-30~-10%": {
+   "limitup": 0.2112,
+   "all": 0.3331
+  },
+  "-10~0% (신고가 근처)": {
+   "limitup": 0.1153,
+   "all": 0.0947
+  }
+ },
+ "forward": {
+  "next_open_gap": {
+   "n": 4597,
+   "mean": 0.0777466319493292,
+   "p10": -0.03283174182356746,
+   "p25": 0.005586592178770999,
+   "p50": 0.06275303643724706,
+   "p75": 0.13059033989266555,
+   "p90": 0.2339943797671618,
+   "win_rate": 0.7689797694148358
+  },
+  "next_ret": {
+   "n": 4597,
+   "mean": 0.03449743408365877,
+   "p10": -0.13095456563563712,
+   "p25": -0.07017543859649122,
+   "p50": 0.0050441361916770955,
+   "p75": 0.11602209944751385,
+   "p90": 0.29900990099009905,
+   "win_rate": 0.5229497498368502
+  },
+  "fwd_5d": {
+   "n": 4545,
+   "mean": 0.034222444507090236,
+   "p10": -0.23476622639980554,
+   "p25": -0.15196506550218336,
+   "p50": -0.04347826086956519,
+   "p75": 0.11002444987775051,
+   "p90": 0.34098597370751016,
+   "win_rate": 0.41804180418041803
+  },
+  "fwd_20d": {
+   "n": 4452,
+   "mean": 0.005588014261622466,
+   "p10": -0.3581165201722168,
+   "p25": -0.24249584277522507,
+   "p50": -0.12068207617805471,
+   "p75": 0.07262829631250678,
+   "p90": 0.39686548049368525,
+   "win_rate": 0.318733153638814
+  },
+  "next_limitup_rate": 0.1474484256243214,
+  "next_touch_rate": 0.23691639522258415,
+  "next_hi_ret_median": 0.1791666666666667,
+  "first_limitup_next_ret_mean": 0.030882691617164528,
+  "second_after_streak_rate": 0.2767203513909224
+ },
+ "forward_by_market": {
+  "KOSDAQ": {
+   "next_ret": 0.0038,
+   "fwd_5d": -0.0374,
+   "fwd_20d": -0.1156
+  },
+  "KOSPI": {
+   "next_ret": 0.0116,
+   "fwd_5d": -0.055,
+   "fwd_20d": -0.1408
+  }
+ },
+ "forward_by_cap": {
+  "500억 미만": {
+   "next_ret": -0.007,
+   "fwd_20d": -0.1298
+  },
+  "500억~1천억": {
+   "next_ret": 0.0061,
+   "fwd_20d": -0.1239
+  },
+  "1천억~3천억": {
+   "next_ret": 0.0152,
+   "fwd_20d": -0.1215
+  },
+  "3천억~1조": {
+   "next_ret": 0.012,
+   "fwd_20d": -0.114
+  },
+  "1조~5조": {
+   "next_ret": 0.0106,
+   "fwd_20d": -0.0414
+  },
+  "5조 이상": {
+   "next_ret": 0.0318,
+   "fwd_20d": -0.0597
+  }
+ },
+ "streak_len": {
+  "1": 3434,
+  "2": 367,
+  "3": 84,
+  "4": 23,
+  "5": 16,
+  "6": 1,
+  "7": 1
+ },
+ "top_repeat": [
+  {
+   "symbol": "002995.KS",
+   "name": "KUMHO Engineering & Construction Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 29,
+   "first": "2024-06-18",
+   "last": "2026-11-13"
+  },
+  {
+   "symbol": "065170.KQ",
+   "name": "BL Pharmtech Corp.",
+   "market": "KOSDAQ",
+   "sector": "Consumer Defensive",
+   "count": 27,
+   "first": "2024-01-30",
+   "last": "2026-09-11"
+  },
+  {
+   "symbol": "009415.KS",
+   "name": "Taeyoung Engineering & Construction Co.,Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 23,
+   "first": "2024-01-02",
+   "last": "2026-11-11"
+  },
+  {
+   "symbol": "062970.KQ",
+   "name": "KOREA ADVANCED MATERIALS Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 22,
+   "first": "2024-03-14",
+   "last": "2026-09-15"
+  },
+  {
+   "symbol": "042940.KQ",
+   "name": "Sangji Construction, Inc.",
+   "market": "KOSDAQ",
+   "sector": "Industrials",
+   "count": 21,
+   "first": "2024-03-14",
+   "last": "2026-10-29"
+  },
+  {
+   "symbol": "011080.KQ",
+   "name": "HYUNGJI INNOVATION & CREATIVE Co.,Ltd",
+   "market": "KOSDAQ",
+   "sector": "Consumer Cyclical",
+   "count": 21,
+   "first": "2024-09-24",
+   "last": "2026-10-30"
+  },
+  {
+   "symbol": "299660.KQ",
+   "name": "Cellid, Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Healthcare",
+   "count": 20,
+   "first": "2024-07-23",
+   "last": "2026-09-22"
+  },
+  {
+   "symbol": "45226K.KS",
+   "name": "Hanwha Galleria Corporation",
+   "market": "KOSPI",
+   "sector": "Consumer Cyclical",
+   "count": 20,
+   "first": "2023-12-28",
+   "last": "2026-10-16"
+  },
+  {
+   "symbol": "215790.KQ",
+   "name": "Inno Instrument Inc.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 19,
+   "first": "2025-10-16",
+   "last": "2026-08-05"
+  },
+  {
+   "symbol": "012205.KS",
+   "name": "Keyang Electric Machinery Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 19,
+   "first": "2025-12-18",
+   "last": "2026-11-11"
+  },
+  {
+   "symbol": "069540.KQ",
+   "name": "Lightron Fiber-Optic Devices Inc.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 18,
+   "first": "2024-03-04",
+   "last": "2026-10-28"
+  },
+  {
+   "symbol": "208640.KQ",
+   "name": "Thumbage Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Communication Services",
+   "count": 18,
+   "first": "2024-11-14",
+   "last": "2026-11-10"
+  },
+  {
+   "symbol": "084670.KS",
+   "name": "Dongyang Express Corp.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 17,
+   "first": "2025-11-19",
+   "last": "2026-10-08"
+  },
+  {
+   "symbol": "006345.KS",
+   "name": "Daewon Cable. Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 17,
+   "first": "2024-04-12",
+   "last": "2026-11-09"
+  },
+  {
+   "symbol": "36328K.KS",
+   "name": "TY Holdings Co., Ltd",
+   "market": "KOSPI",
+   "sector": "Communication Services",
+   "count": 17,
+   "first": "2023-12-07",
+   "last": "2026-11-12"
+  },
+  {
+   "symbol": "900100.KQ",
+   "name": "PhionX",
+   "market": "KOSDAQ",
+   "sector": "Industrials",
+   "count": 17,
+   "first": "2024-07-02",
+   "last": "2026-11-09"
+  },
+  {
+   "symbol": "250930.KQ",
+   "name": "YeSUN Tech Co.,Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 16,
+   "first": "2024-08-06",
+   "last": "2026-11-11"
+  },
+  {
+   "symbol": "000650.KS",
+   "name": "Chunil Express Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 16,
+   "first": "2024-01-31",
+   "last": "2026-10-14"
+  },
+  {
+   "symbol": "177350.KQ",
+   "name": "Vessel Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 15,
+   "first": "2023-12-08",
+   "last": "2026-11-12"
+  },
+  {
+   "symbol": "001210.KS",
+   "name": "Kumho Electric, Inc.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 15,
+   "first": "2024-02-26",
+   "last": "2026-10-12"
+  },
+  {
+   "symbol": "138360.KQ",
+   "name": "NRobotics Co.,Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 14,
+   "first": "2023-11-16",
+   "last": "2026-07-22"
+  },
+  {
+   "symbol": "221800.KQ",
+   "name": "ZGOO Holdings Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Healthcare",
+   "count": 14,
+   "first": "2025-01-08",
+   "last": "2026-08-28"
+  },
+  {
+   "symbol": "900300.KQ",
+   "name": "Organic Tea Cosmetics Holdings Company Limited",
+   "market": "KOSDAQ",
+   "sector": "Consumer Defensive",
+   "count": 14,
+   "first": "2024-05-28",
+   "last": "2026-11-09"
+  },
+  {
+   "symbol": "079650.KQ",
+   "name": "Seosan Corporation",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 14,
+   "first": "2026-06-10",
+   "last": "2026-10-13"
+  },
+  {
+   "symbol": "069920.KQ",
+   "name": "Exion Group Company Limited",
+   "market": "KOSDAQ",
+   "sector": "Consumer Cyclical",
+   "count": 14,
+   "first": "2024-06-10",
+   "last": "2026-10-02"
+  },
+  {
+   "symbol": "084695.KS",
+   "name": "Daesang Holdings Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Consumer Defensive",
+   "count": 13,
+   "first": "2023-11-27",
+   "last": "2025-10-01"
+  },
+  {
+   "symbol": "079950.KQ",
+   "name": "INVENIA Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 13,
+   "first": "2023-12-20",
+   "last": "2026-07-20"
+  },
+  {
+   "symbol": "004545.KS",
+   "name": "KleanNara Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Basic Materials",
+   "count": 13,
+   "first": "2023-11-24",
+   "last": "2026-11-12"
+  },
+  {
+   "symbol": "389140.KQ",
+   "name": "4by4 Inc",
+   "market": "KOSDAQ",
+   "sector": "Communication Services",
+   "count": 13,
+   "first": "2024-01-09",
+   "last": "2026-02-10"
+  },
+  {
+   "symbol": "000545.KS",
+   "name": "Heungkuk Fire&Marine Insurance Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Financial Services",
+   "count": 13,
+   "first": "2023-12-01",
+   "last": "2026-02-20"
+  }
+ ],
+ "top_repeat_common": [
+  {
+   "symbol": "065170.KQ",
+   "name": "BL Pharmtech Corp.",
+   "market": "KOSDAQ",
+   "sector": "Consumer Defensive",
+   "count": 27,
+   "first": "2024-01-30",
+   "last": "2026-09-11",
+   "mcap_median": 49818855555.0
+  },
+  {
+   "symbol": "062970.KQ",
+   "name": "KOREA ADVANCED MATERIALS Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 22,
+   "first": "2024-03-14",
+   "last": "2026-09-15",
+   "mcap_median": 102894981913.7826
+  },
+  {
+   "symbol": "042940.KQ",
+   "name": "Sangji Construction, Inc.",
+   "market": "KOSDAQ",
+   "sector": "Industrials",
+   "count": 21,
+   "first": "2024-03-14",
+   "last": "2026-10-29",
+   "mcap_median": 56118031200.0
+  },
+  {
+   "symbol": "011080.KQ",
+   "name": "HYUNGJI INNOVATION & CREATIVE Co.,Ltd",
+   "market": "KOSDAQ",
+   "sector": "Consumer Cyclical",
+   "count": 21,
+   "first": "2024-09-24",
+   "last": "2026-10-30",
+   "mcap_median": 35889382535.90625
+  },
+  {
+   "symbol": "299660.KQ",
+   "name": "Cellid, Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Healthcare",
+   "count": 20,
+   "first": "2024-07-23",
+   "last": "2026-09-22",
+   "mcap_median": 119363205000.0
+  },
+  {
+   "symbol": "215790.KQ",
+   "name": "Inno Instrument Inc.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 19,
+   "first": "2025-10-16",
+   "last": "2026-08-05",
+   "mcap_median": 30050692780.0
+  },
+  {
+   "symbol": "208640.KQ",
+   "name": "Thumbage Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Communication Services",
+   "count": 18,
+   "first": "2024-11-14",
+   "last": "2026-11-10",
+   "mcap_median": 28882927225.0
+  },
+  {
+   "symbol": "069540.KQ",
+   "name": "Lightron Fiber-Optic Devices Inc.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 18,
+   "first": "2024-03-04",
+   "last": "2026-10-28",
+   "mcap_median": 222284766832.5
+  },
+  {
+   "symbol": "900100.KQ",
+   "name": "PhionX",
+   "market": "KOSDAQ",
+   "sector": "Industrials",
+   "count": 17,
+   "first": "2024-07-02",
+   "last": "2026-11-09",
+   "mcap_median": 4425935640.0
+  },
+  {
+   "symbol": "084670.KS",
+   "name": "Dongyang Express Corp.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 17,
+   "first": "2025-11-19",
+   "last": "2026-10-08",
+   "mcap_median": 76313250000.0
+  },
+  {
+   "symbol": "000650.KS",
+   "name": "Chunil Express Co., Ltd.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 16,
+   "first": "2024-01-31",
+   "last": "2026-10-14",
+   "mcap_median": 223191245600.0
+  },
+  {
+   "symbol": "250930.KQ",
+   "name": "YeSUN Tech Co.,Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 16,
+   "first": "2024-08-06",
+   "last": "2026-11-11",
+   "mcap_median": 9960975252.0
+  },
+  {
+   "symbol": "177350.KQ",
+   "name": "Vessel Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Technology",
+   "count": 15,
+   "first": "2023-12-08",
+   "last": "2026-11-12",
+   "mcap_median": 24468355000.0
+  },
+  {
+   "symbol": "001210.KS",
+   "name": "Kumho Electric, Inc.",
+   "market": "KOSPI",
+   "sector": "Industrials",
+   "count": 15,
+   "first": "2024-02-26",
+   "last": "2026-10-12",
+   "mcap_median": 49787587200.0
+  },
+  {
+   "symbol": "221800.KQ",
+   "name": "ZGOO Holdings Co., Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Healthcare",
+   "count": 14,
+   "first": "2025-01-08",
+   "last": "2026-08-28",
+   "mcap_median": 96604531360.0
+  },
+  {
+   "symbol": "069920.KQ",
+   "name": "Exion Group Company Limited",
+   "market": "KOSDAQ",
+   "sector": "Consumer Cyclical",
+   "count": 14,
+   "first": "2024-06-10",
+   "last": "2026-10-02",
+   "mcap_median": 20426631826.5
+  },
+  {
+   "symbol": "900300.KQ",
+   "name": "Organic Tea Cosmetics Holdings Company Limited",
+   "market": "KOSDAQ",
+   "sector": "Consumer Defensive",
+   "count": 14,
+   "first": "2024-05-28",
+   "last": "2026-11-09",
+   "mcap_median": 53627724600.0
+  },
+  {
+   "symbol": "079650.KQ",
+   "name": "Seosan Corporation",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 14,
+   "first": "2026-06-10",
+   "last": "2026-10-13",
+   "mcap_median": 73800000000.0
+  },
+  {
+   "symbol": "138360.KQ",
+   "name": "NRobotics Co.,Ltd.",
+   "market": "KOSDAQ",
+   "sector": "Basic Materials",
+   "count": 14,
+   "first": "2023-11-16",
+   "last": "2026-07-22",
+   "mcap_median": 101653880737.0
+  },
+  {
+   "symbol": "389140.KQ",
+   "name": "4by4 Inc",
+   "market": "KOSDAQ",
+   "sector": "Communication Services",
+   "count": 13,
+   "first": "2024-01-09",
+   "last": "2026-02-10",
+   "mcap_median": 128998404400.0
+  }
+ ],
+ "by_market_total": {
+  "KOSDAQ": 3446,
+  "KOSPI": 1159
+ },
+ "sector_by_period": {
+  "Basic Materials": {
+   "1년차 (23.11~24.11)": 74,
+   "2년차 (24.11~25.11)": 114,
+   "3년차 (25.11~26.11)": 209
+  },
+  "Communication Services": {
+   "1년차 (23.11~24.11)": 71,
+   "2년차 (24.11~25.11)": 104,
+   "3년차 (25.11~26.11)": 98
+  },
+  "Consumer Cyclical": {
+   "1년차 (23.11~24.11)": 101,
+   "2년차 (24.11~25.11)": 174,
+   "3년차 (25.11~26.11)": 257
+  },
+  "Consumer Defensive": {
+   "1년차 (23.11~24.11)": 68,
+   "2년차 (24.11~25.11)": 70,
+   "3년차 (25.11~26.11)": 113
+  },
+  "Energy": {
+   "1년차 (23.11~24.11)": 7,
+   "2년차 (24.11~25.11)": 3,
+   "3년차 (25.11~26.11)": 8
+  },
+  "Financial Services": {
+   "1년차 (23.11~24.11)": 42,
+   "2년차 (24.11~25.11)": 52,
+   "3년차 (25.11~26.11)": 90
+  },
+  "Healthcare": {
+   "1년차 (23.11~24.11)": 175,
+   "2년차 (24.11~25.11)": 181,
+   "3년차 (25.11~26.11)": 261
+  },
+  "Industrials": {
+   "1년차 (23.11~24.11)": 166,
+   "2년차 (24.11~25.11)": 217,
+   "3년차 (25.11~26.11)": 460
+  },
+  "Real Estate": {
+   "1년차 (23.11~24.11)": 1,
+   "2년차 (24.11~25.11)": 5,
+   "3년차 (25.11~26.11)": 14
+  },
+  "Technology": {
+   "1년차 (23.11~24.11)": 266,
+   "2년차 (24.11~25.11)": 366,
+   "3년차 (25.11~26.11)": 784
+  },
+  "Unknown": {
+   "1년차 (23.11~24.11)": 0,
+   "2년차 (24.11~25.11)": 0,
+   "3년차 (25.11~26.11)": 1
+  },
+  "Utilities": {
+   "1년차 (23.11~24.11)": 25,
+   "2년차 (24.11~25.11)": 5,
+   "3년차 (25.11~26.11)": 23
+  }
+ },
+ "repeat_dist": {
+  "1회": 514,
+  "2회": 297,
+  "3~4회": 310,
+  "5회 이상": 302
+ },
+ "daily_count": {
+  "count": 728.0,
+  "mean": 6.33,
+  "std": 4.14,
+  "min": 1.0,
+  "25%": 3.0,
+  "50%": 5.0,
+  "75%": 8.0,
+  "max": 27.0
+ },
+ "busiest_days": {
+  "2026-07-31": 27,
+  "2026-05-13": 26,
+  "2026-07-01": 24,
+  "2026-04-15": 24,
+  "2024-12-04": 22,
+  "2026-04-13": 21,
+  "2026-04-08": 20,
+  "2026-04-14": 20,
+  "2026-07-15": 20,
+  "2026-02-04": 20
+ },
+ "weekday": {
+  "Wednesday": 1008,
+  "Tuesday": 962,
+  "Monday": 932,
+  "Thursday": 920,
+  "Friday": 783
+ },
+ "kumho_check": [
+  {
+   "date": "2026-06-24",
+   "ret": 0.2989,
+   "next_ret": 0.0526
+  },
+  {
+   "date": "2026-06-26",
+   "ret": 0.3,
+   "next_ret": 0.2986
+  },
+  {
+   "date": "2026-06-29",
+   "ret": 0.2986,
+   "next_ret": 0.2997
+  },
+  {
+   "date": "2026-06-30",
+   "ret": 0.2997,
+   "next_ret": 0.2994
+  },
+  {
+   "date": "2026-07-01",
+   "ret": 0.2994,
+   "next_ret": -0.1933
+  },
+  {
+   "date": "2026-07-06",
+   "ret": 0.3,
+   "next_ret": 0.1336
+  },
+  {
+   "date": "2026-07-30",
+   "ret": 0.3,
+   "next_ret": -0.04
+  },
+  {
+   "date": "2026-08-11",
+   "ret": 0.2998,
+   "next_ret": 0.2994
+  },
+  {
+   "date": "2026-08-12",
+   "ret": 0.2994,
+   "next_ret": -0.0375
+  },
+  {
+   "date": "2026-11-13",
+   "ret": 0.299,
+   "next_ret": NaN
+  }
+ ]
+}
