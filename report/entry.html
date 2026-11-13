@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상한가 전조와 진입·손절 전략 분석</title>
+<style>
+.viz-root{color-scheme:light;--surface-1:#fcfcfb;--page:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+--grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);--series-1:#2a78d6;--series-2:#eb6834;--good:#006300;--bad:#d03b3b}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .viz-root{color-scheme:dark;--surface-1:#1a1a19;--page:#0d0d0d;
+--text-primary:#f0efec;--text-secondary:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--series-1:#3987e5;--series-2:#d95926;--good:#0ca30c;--bad:#e66767}}
+:root[data-theme="dark"] .viz-root{color-scheme:dark;--surface-1:#1a1a19;--page:#0d0d0d;--text-primary:#f0efec;--text-secondary:#c3c2b7;--grid:#2c2c2a;
+--axis:#383835;--border:rgba(255,255,255,.10);--series-1:#3987e5;--series-2:#d95926;--good:#0ca30c;--bad:#e66767}
+*{box-sizing:border-box} body{margin:0}
+.viz-root{background:var(--page);color:var(--text-primary);font:15px/1.6 system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;min-height:100vh}
+main{max-width:1040px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:28px;margin:0 0 4px} h2{font-size:20px;margin:40px 0 8px} h3{font-size:16px;margin:18px 0 6px}
+.sub{color:var(--text-secondary);margin:0 0 20px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:14px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.tile .v{font-size:26px;font-weight:650} .tile .l{color:var(--text-secondary);font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+th{color:var(--text-secondary);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.pos{color:var(--good)} td.neg{color:var(--bad)} .dim{color:var(--muted);font-size:12px}
+.scroll{overflow-x:auto} .note{color:var(--text-secondary);font-size:13px}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--text-secondary);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+ul.k li{margin:6px 0}
+.callout{border-left:3px solid var(--series-1);padding:4px 0 4px 14px;margin:12px 0}
+.warn{border-left:3px solid var(--bad);padding:4px 0 4px 14px;margin:12px 0}
+.tip{position:fixed;pointer-events:none;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none;z-index:9;white-space:nowrap}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit} svg .lab{fill:var(--text-secondary);font-size:12px}
+</style></head><body><div class="viz-root"><main>
+<h1>상한가 전조와 진입·손절 전략 분석</h1>
+<p class="sub">2023-11-13 ~ 2026-11-13 · 코스피·코스닥 보통주 · 진입은 신호일 종가, 이후 최대 10거래일 관찰</p>
+
+<div class="tiles">
+ <div class="tile"><div class="v">63%</div><div class="l">첫 상한가 직전 5일 동안 거래량 3배 넘게 터진 날이 하루도 없던 비율</div></div>
+ <div class="tile"><div class="v">0.95배</div><div class="l">상한가 전날 거래량 (20일 평균 대비, 중앙값)</div></div>
+ <div class="tile"><div class="v">14배</div><div class="l">상한가 당일 거래량 (중앙값)</div></div>
+ <div class="tile"><div class="v">1.9%</div><div class="l">아무 종목이나 샀을 때 10일 안에 상한가 갈 확률 (기준선)</div></div>
+</div>
+
+<h2>결론부터</h2>
+<div class="card"><ul class="k">
+<li><b>상한가의 대부분은 차트로 미리 알 수 없습니다.</b> 첫 상한가 종목의 전날 거래량은 평소 수준(중앙값 0.95배)이고, 28%는 직전 5일 동안 거래량도 주가도 조용했습니다. 상한가는 <b>당일 장중에 나온 공시·기사·테마 확산</b>으로 터지는 경우가 대부분입니다.</li>
+<li><b>그래도 흔적은 있습니다.</b> 직전 5일 안에 장중 +15% 터치, 거래량 2~5배 급증, +10% 상승일이 있던 비율이 평소보다 2~3배 높습니다. 다만 이런 흔적이 있어도 실제로 10일 안에 상한가를 가는 건 <b>4~9%</b>뿐입니다.</li>
+<li><b>차트 신호만으로 들어가면 기대수익이 0 근처이거나 마이너스입니다.</b> 상한가 확률은 기준선의 2~5배로 높아지지만, 상한가를 못 간 경우의 손실이 그 이익을 상쇄합니다. 특히 '상한가 실패한 급등주', '윗꼬리 단 종목', '상한가 다음 날 추격'은 모든 손절 설정에서 손실이었습니다.</li>
+<li><b>유일하게 플러스였던 건 '상한가 당일 종가 매수 + -5% 손절'(평균 +2.4%)입니다.</b> 그런데 상한가에 매수 주문이 쌓여 있으면 체결 자체가 어렵습니다. 체결이 잘 되는 날은 오히려 상한가가 풀릴 위험이 큰 날이라, 실제 수익은 이보다 낮을 가능성이 큽니다.</li>
+<li><b>손절은 -10% 전후가 타협점이지만, 손절가대로 팔리지 않을 위험이 실재합니다.</b> 3~9%의 거래는 손절가 아래에서 시가가 시작(갭 하락)해 손절가보다 더 손해 보고 팔렸습니다. 하한가로 마감한 날의 93%는 하한가에 매도 주문이 쌓여 <b>아예 팔 수 없는 상태</b>였습니다.</li>
+</ul></div>
+
+<h2>1. 상한가 전에 어떤 움직임이 있었나</h2>
+<div class="card">
+<h3>첫 상한가 D-10 ~ D-1: 거래량 (20일 평균 대비, 중앙값)</h3>
+<div id="c-pre"></div>
+<p class="note">상한가 직전 10일 동안 거래량은 오히려 평소보다 적습니다(0.6~0.7배). 전날 겨우 평균 수준(0.95배)으로 올라오고, 당일 14배로 폭발합니다. '조용하다가 갑자기'가 전형적인 패턴입니다.</p>
+</div>
+<div class="card scroll">
+<h3>직전 5일 흔적: 상한가 종목 vs 평소</h3>
+<table><tr><th>흔적</th><th class=n>첫 상한가 종목</th><th class=n>평소 (임의의 날)</th><th class=n>배율</th></tr><tr><td>D-5~D-1 중 거래량 3배 이상 하루 이상</td><td class=n>37%</td><td class=n>18%</td><td class=n><b>2.1배</b></td></tr><tr><td>D-5~D-1 중 거래량 5배 이상 하루 이상</td><td class=n>25%</td><td class=n>10%</td><td class=n><b>2.5배</b></td></tr><tr><td>D-5~D-1 중 +10% 이상 상승일</td><td class=n>18%</td><td class=n>7%</td><td class=n><b>2.7배</b></td></tr><tr><td>D-5~D-1 중 장중 +15% 이상 터치</td><td class=n>25%</td><td class=n>8%</td><td class=n><b>3.0배</b></td></tr><tr><td>D-1 거래량 2배 이상</td><td class=n>25%</td><td class=n>9%</td><td class=n><b>2.8배</b></td></tr><tr><td>D-1 상승 마감</td><td class=n>50%</td><td class=n>44%</td><td class=n><b>1.1배</b></td></tr></table>
+<p class="note">'장중 +15% 터치'가 가장 강한 전조(3.0배)입니다. 누군가 먼저 사고 있다는 신호일 수 있습니다. 하지만 상한가 종목의 4분의 3은 이런 흔적 없이 바로 상한가를 갔습니다.</p>
+</div>
+
+<h2>2. 공시·기사·예정 일정</h2>
+<div class="card"><ul class="k">
+<li><b>공시형 (당일 장중 공시 → 즉시 상한가):</b> 단일판매·공급계약(시총 대비 대형 수주, 금호건설 사례), 무상증자, 자사주 소각, 최대주주 변경·M&A, 최대주주의 유상증자 참여, 기술이전·FDA 허가(HLB 그룹주 10곳 동시 상한가). 공시 시각에 바로 오르기 때문에 미리 사 둔 사람만 이득을 봅니다.</li>
+<li><b>기사·리포트형:</b> 증권사 첫 리포트(효성화학), 정부 정책(메가프로젝트, 반도체 클러스터 → 서산·금호건설·금호전기), 해외 이슈(미국 광통신·양자컴퓨터·MS 실적 → 국내 관련주 동조).</li>
+<li><b>테마·수급형 (공시 없음):</b> 품절주(유통주식이 적은 종목), 우선주, 정치 테마, 동전주. 상한가 기사에서 '뚜렷한 재료 없이'라고 나오는 종목들로, 지수가 폭락한 날 오히려 몰립니다(2026년 7월 7일·28일).</li>
+<li><b>예정된 일정형:</b> 학회 임상 발표(ASCO·ESMO·CTAD 등), 실적 발표, FDA 결정일, 공개매수. 일정은 미리 알 수 있지만 결과는 모릅니다. 기대감에 미리 오르고 발표 당일 '재료 소멸'로 빠지는 경우가 흔합니다.</li>
+<li><b>실적 시즌 효과는 없었습니다.</b> 분기·연간 실적 공시 시즌의 상한가 발생률(하루·종목당 2.34‰)은 그 외 기간(2.43‰)과 같습니다. 달력보다 개별 재료가 중요합니다.</li>
+<li><b>미공개정보 주의:</b> 공시 직전의 거래량 급증은 내부자 거래일 수 있고, 실제로 금융당국 적발 사례가 이어지고 있습니다. 이런 정보를 듣고 매매하면 불법입니다.</li>
+</ul>
+<p class="note">공시와 상한가를 1:1로 붙이는 정량 분석에는 DART(전자공시) API 키가 필요합니다. 위 분류는 상한가 기사 표본을 바탕으로 정리했습니다.</p></div>
+
+<h2>3. 진입 신호별 백테스트</h2>
+<div class="card">
+<h3>10일 안에 상한가 갈 확률</h3>
+<div id="c-sig"></div>
+</div>
+<div class="card scroll"><table>
+<tr><th>신호 (신호일 종가 매수)</th><th class=n>건수</th><th class=n>1일 내</th><th class=n>3일 내</th><th class=n>5일 내</th><th class=n>10일 내</th><th class=n>기준 대비</th><th class=n>10일 내 하한가</th></tr>
+<tr><td>기준: 아무 날이나 종가 매수</td><td class=n>200,000</td><td class=n>0.2%</td><td class=n>0.6%</td><td class=n>1.0%</td><td class=n><b>1.9%</b></td><td class=n>1.0배</td><td class=n>0.1%</td></tr><tr><td>A. 거래량 3배↑ + 5~15% 상승 + 고가권 마감</td><td class=n>6,408</td><td class=n>1.0%</td><td class=n>1.9%</td><td class=n>2.6%</td><td class=n><b>4.1%</b></td><td class=n>2.1배</td><td class=n>0.2%</td></tr><tr><td>B. A + 52주 고점 대비 -40% 이하</td><td class=n>2,497</td><td class=n>1.0%</td><td class=n>2.2%</td><td class=n>3.1%</td><td class=n><b>5.0%</b></td><td class=n>2.6배</td><td class=n>0.4%</td></tr><tr><td>C. 거래량 5배↑ + 15~29% 급등(상한가 실패)</td><td class=n>3,629</td><td class=n>1.7%</td><td class=n>3.8%</td><td class=n>5.2%</td><td class=n><b>7.8%</b></td><td class=n>4.1배</td><td class=n>0.6%</td></tr><tr><td>D. 장중 +20% 이상 갔다가 윗꼬리(종가 +10% 이하)</td><td class=n>5,563</td><td class=n>1.7%</td><td class=n>4.2%</td><td class=n>6.2%</td><td class=n><b>9.3%</b></td><td class=n>4.8배</td><td class=n>0.6%</td></tr><tr><td>E. 첫 상한가 다음 날 종가 추격(따라잡기)</td><td class=n>2,909</td><td class=n>4.1%</td><td class=n>7.6%</td><td class=n>9.5%</td><td class=n><b>13.6%</b></td><td class=n>7.1배</td><td class=n>1.3%</td></tr><tr><td>F. 상한가 당일 종가 매수(상한가 따라잡기)</td><td class=n>2,906</td><td class=n>11.0%</td><td class=n>13.7%</td><td class=n>16.0%</td><td class=n><b>19.1%</b></td><td class=n>10.0배</td><td class=n>1.5%</td></tr></table>
+<p class="note">A~D는 시가총액 3천억 미만 소형주만 대상입니다. '고가권 마감'은 당일 고가·저가 범위의 상위 30% 안에서 끝났다는 뜻입니다.</p>
+</div>
+<div class="card scroll">
+<h3>상한가는 며칠 안에 왔나 · 거래량은 얼마였나</h3>
+<table><tr><th>신호</th><th class=n>상한가 중 1일차</th><th class=n>3일 안 누적</th><th class=n>신호일 거래량</th><th class=n>성공 종목</th><th class=n>실패 종목</th></tr><tr><td>A 거래량↑+5~15%</td><td class=n>25%</td><td class=n>46%</td><td class=n>4.9배</td><td class=n>4.9배</td><td class=n>4.9배</td></tr><tr><td>B A+낙폭과대</td><td class=n>19%</td><td class=n>43%</td><td class=n>4.7배</td><td class=n>4.5배</td><td class=n>4.7배</td></tr><tr><td>C 15~29% 급등</td><td class=n>22%</td><td class=n>49%</td><td class=n>16.3배</td><td class=n>15.7배</td><td class=n>16.5배</td></tr><tr><td>D 장중+20% 윗꼬리</td><td class=n>18%</td><td class=n>45%</td><td class=n>14.6배</td><td class=n>11.3배</td><td class=n>15.1배</td></tr><tr><td>E 상한가 다음날</td><td class=n>30%</td><td class=n>56%</td><td class=n>11.5배</td><td class=n>11.0배</td><td class=n>11.6배</td></tr><tr><td>F 상한가 종가</td><td class=n>58%</td><td class=n>72%</td><td class=n>13.6배</td><td class=n>9.6배</td><td class=n>14.6배</td></tr></table>
+<p class="note">10일 안에 상한가를 간 경우 절반 정도는 3일 안에 갔습니다. <b>3일 안에 안 가면 확률이 빠르게 떨어집니다.</b> 신호일 거래량은 성공·실패 간 차이가 거의 없어서 거래량만으로는 걸러지지 않습니다.</p>
+</div>
+
+<h3>상한가 당일 거래량이 적을수록 다음 날도 상한가</h3>
+<div class="card scroll"><table>
+<tr><th>첫 상한가 당일 거래량 (20일 평균 대비)</th><th class=n>건수</th><th class=n>다음 날 또 상한가</th><th class=n>다음 날 종가 중앙값</th><th class=n>20일 후 중앙값</th></tr><tr><td>3배 미만</td><td class=n>734</td><td class=n><b>18.0%</b></td><td class=n>+2.7%</td><td class=n>-12.0%</td></tr><tr><td>3~7배</td><td class=n>783</td><td class=n><b>11.6%</b></td><td class=n>+0.5%</td><td class=n>-12.2%</td></tr><tr><td>7~15배</td><td class=n>697</td><td class=n><b>11.2%</b></td><td class=n>+1.9%</td><td class=n>-8.9%</td></tr><tr><td>15~40배</td><td class=n>728</td><td class=n><b>10.7%</b></td><td class=n>+0.2%</td><td class=n>-10.0%</td></tr><tr><td>40배 이상</td><td class=n>661</td><td class=n><b>6.1%</b></td><td class=n>-1.3%</td><td class=n>-11.6%</td></tr></table>
+<p class="note">거래량이 적은 상한가는 팔려는 사람이 적고 일찍 잠겼다는 뜻입니다. 이런 상한가는 다음 날도 상한가 갈 확률이 18%로, 거래량이 40배 넘게 터진 상한가(6%)의 3배입니다. 거래량이 폭발한 상한가는 차익 실현 매물이 많았다는 신호입니다.</p></div>
+
+<h2>4. 손절선은 어디에</h2>
+<div class="card scroll">
+<h3>손절선별 1회 평균 수익률 (최대 10일 보유)</h3>
+<table><tr><th>신호</th><th class=n>-5% 손절</th><th class=n>-7%</th><th class=n>-10%</th><th class=n>-15%</th><th class=n>손절 없음</th></tr><tr><td>기준(아무 날)</td><td class='n neg'>-0.11%</td><td class='n neg'>-0.11%</td><td class='n neg'>-0.12%</td><td class='n neg'>-0.10%</td><td class='n pos'><b>+0.13%</b></td></tr><tr><td>A 거래량↑+5~15%</td><td class='n pos'>+0.27%</td><td class='n pos'>+0.31%</td><td class='n pos'>+0.62%</td><td class='n pos'>+0.69%</td><td class='n pos'><b>+0.72%</b></td></tr><tr><td>B A+낙폭과대</td><td class='n pos'>+0.13%</td><td class='n pos'>+0.24%</td><td class='n pos'>+0.69%</td><td class='n pos'>+0.78%</td><td class='n pos'><b>+0.86%</b></td></tr><tr><td>C 15~29% 급등</td><td class='n neg'><b>-1.55%</b></td><td class='n neg'>-1.79%</td><td class='n neg'>-2.08%</td><td class='n neg'>-2.37%</td><td class='n neg'>-2.29%</td></tr><tr><td>D 장중+20% 윗꼬리</td><td class='n neg'><b>-0.78%</b></td><td class='n neg'>-0.94%</td><td class='n neg'>-1.13%</td><td class='n neg'>-1.57%</td><td class='n neg'>-1.54%</td></tr><tr><td>E 상한가 다음날</td><td class='n neg'><b>-0.86%</b></td><td class='n neg'>-1.28%</td><td class='n neg'>-1.62%</td><td class='n neg'>-2.13%</td><td class='n neg'>-2.02%</td></tr><tr><td>F 상한가 종가</td><td class='n pos'><b>+2.38%</b></td><td class='n pos'>+1.89%</td><td class='n pos'>+1.37%</td><td class='n pos'>+0.66%</td><td class='n pos'>+0.58%</td></tr></table>
+<p class="note">규칙: 시가가 손절가 아래면 시가에 매도, 장중 손절가를 건드리면 손절가에 매도, 상한가로 마감하면 그날 종가에 매도, 10일째 종가에 매도. 수수료·세금(약 0.2%)과 체결 실패는 반영하지 않았습니다. 굵은 글씨는 신호별 최선의 손절선입니다.</p>
+</div>
+<div class="card scroll">
+<h3>너무 좁은 손절은 '될 놈'도 털어냅니다</h3>
+<table><tr><th>신호</th><th class=n>-5%</th><th class=n>-7%</th><th class=n>-10%</th><th class=n>-15%</th><th class=n>-20%</th><th class=n>-10% 손절 발동률</th></tr><tr><td>A 거래량↑+5~15%</td><td class=n>54%</td><td class=n>65%</td><td class=n>80%</td><td class=n>92%</td><td class=n>97%</td><td class=n>34%</td></tr><tr><td>B A+낙폭과대</td><td class=n>50%</td><td class=n>62%</td><td class=n>78%</td><td class=n>93%</td><td class=n>98%</td><td class=n>35%</td></tr><tr><td>C 15~29% 급등</td><td class=n>33%</td><td class=n>46%</td><td class=n>62%</td><td class=n>79%</td><td class=n>88%</td><td class=n>64%</td></tr><tr><td>D 장중+20% 윗꼬리</td><td class=n>37%</td><td class=n>47%</td><td class=n>61%</td><td class=n>73%</td><td class=n>81%</td><td class=n>48%</td></tr><tr><td>E 상한가 다음날</td><td class=n>40%</td><td class=n>46%</td><td class=n>59%</td><td class=n>75%</td><td class=n>85%</td><td class=n>67%</td></tr><tr><td>F 상한가 종가</td><td class=n>65%</td><td class=n>69%</td><td class=n>76%</td><td class=n>85%</td><td class=n>95%</td><td class=n>62%</td></tr></table>
+<p class="note">표의 숫자는 결국 상한가를 간 종목 중 상한가 전까지 해당 손절선을 건드리지 않은 비율입니다. 예를 들어 A 신호에서 -5% 손절을 쓰면, 결국 상한가 간 종목의 절반 가까이를 그 전에 손절했습니다. -10%면 약 80%가 살아남고, -15%면 90% 이상이 살아남습니다.</p>
+</div>
+<div class="callout"><b>손절선 가이드</b><br>
+· 거래량 동반 초기 돌파(A·B)에 진입: <b>-10%</b>가 균형점입니다. 상한가 간 종목의 약 80%를 지키면서 기대값이 플러스입니다.<br>
+· 상한가 당일 종가에 진입(F): <b>-5% 손절 + 다음 날 상한가 못 가면 정리</b>가 가장 나았습니다. 다음 날 시가가 평균 +6% 갭 상승하므로 손절보다 익절할 기회가 먼저 옵니다.<br>
+· 이미 크게 오른 종목(C·D·E)은 손절선을 어떻게 잡아도 마이너스였습니다. <b>진입하지 않는 게 최선</b>입니다.<br>
+· 시간 손절: 진입 후 <b>3거래일 안에 움직임이 없으면 정리</b>하는 게 좋습니다. 상한가는 대부분 초반에 옵니다.</div>
+
+<h2>5. 손절이 안 되고 하한가로 갈 수 있나</h2>
+<div class="tiles">
+ <div class="tile"><div class="v">257건</div><div class="l">3년간 보통주 하한가 마감 (182종목). 상한가의 약 6% 규모</div></div>
+ <div class="tile"><div class="v">93%</div><div class="l">하한가 날 중 하한가에 잠긴 채 마감한 비율 (팔 수 없음)</div></div>
+ <div class="tile"><div class="v">8%</div><div class="l">하한가 다음 날도 하한가</div></div>
+ <div class="tile"><div class="v">3.3%</div><div class="l">상한가 이후 10일 안에 하한가</div></div>
+</div>
+<div class="card scroll">
+<h3>손절가 아래로 갭 하락해서 시작한 비율 (괄호: 그때 실제 손실 중앙값)</h3>
+<table><tr><th>신호</th><th class=n>-5% 손절</th><th class=n>-10% 손절</th><th class=n>-15% 손절</th><th class=n>-10% 손절 최악</th></tr><tr><td>기준(아무 날)</td><td class=n>4.4% <span class=dim>(-5.8%)</span></td><td class=n>2.5% <span class=dim>(-11.1%)</span></td><td class=n>1.4% <span class=dim>(-16.4%)</span></td><td class='n neg'>-83%</td></tr><tr><td>A 거래량↑+5~15%</td><td class=n>3.8% <span class=dim>(-5.8%)</span></td><td class=n>2.8% <span class=dim>(-11.1%)</span></td><td class=n>1.2% <span class=dim>(-16.1%)</span></td><td class='n neg'>-56%</td></tr><tr><td>B A+낙폭과대</td><td class=n>4.1% <span class=dim>(-5.9%)</span></td><td class=n>3.3% <span class=dim>(-11.2%)</span></td><td class=n>1.5% <span class=dim>(-16.4%)</span></td><td class='n neg'>-56%</td></tr><tr><td>C 15~29% 급등</td><td class=n>9.1% <span class=dim>(-6.3%)</span></td><td class=n>4.8% <span class=dim>(-11.1%)</span></td><td class=n>4.0% <span class=dim>(-15.8%)</span></td><td class='n neg'>-65%</td></tr><tr><td>D 장중+20% 윗꼬리</td><td class=n>6.1% <span class=dim>(-6.1%)</span></td><td class=n>4.0% <span class=dim>(-11.2%)</span></td><td class=n>3.1% <span class=dim>(-16.8%)</span></td><td class='n neg'>-64%</td></tr><tr><td>E 상한가 다음날</td><td class=n>7.2% <span class=dim>(-6.3%)</span></td><td class=n>5.2% <span class=dim>(-11.2%)</span></td><td class=n>4.1% <span class=dim>(-16.4%)</span></td><td class='n neg'>-29%</td></tr><tr><td>F 상한가 종가</td><td class=n>6.7% <span class=dim>(-6.9%)</span></td><td class=n>4.1% <span class=dim>(-11.2%)</span></td><td class=n>3.2% <span class=dim>(-16.4%)</span></td><td class='n neg'>-24%</td></tr></table>
+<p class="note">손절가를 정해도 3~9%의 거래에서는 다음 날 아침 손절가 아래로 시작해서 손절가보다 1~2%p 더 손해를 봤습니다. 최악의 경우(하한가 연속, 거래정지 후 재개)는 -10% 손절을 걸어도 <b>-50% 이상</b> 손실이 났습니다.</p>
+</div>
+<div class="warn"><b>하한가 위험이 큰 상황</b><br>
+· <b>상한가 직후:</b> 상한가 종가 기준으로 이후 10일 안의 최저점이 중앙값 -16%, 하위 10%는 -34%까지 빠졌습니다.<br>
+· <b>2~3월 감사보고서 시즌:</b> 감사의견 거절·상장폐지 사유가 이 시기에 나옵니다. 하한가 발생률이 연중 가장 높은 구간 중 하나입니다(7월 폭락장 다음).<br>
+· <b>관리종목·적자 지속·잦은 유상증자 종목:</b> 상한가 단골이면서 하한가와 거래정지 위험도 가장 큽니다.<br>
+· <b>재료 소멸:</b> 임상 결과 실패, 수주 계약 해지, 최대주주 변경 무산 같은 공시는 바로 하한가로 이어지고, 대부분 하한가에 잠겨 매도할 수 없습니다.<br>
+· 이 분석은 상장폐지된 종목이 빠져 있어서 <b>실제 하한가·거래정지 위험은 여기 숫자보다 큽니다.</b></div>
+
+<div class="card scroll"><h3>월별 발생률 (하루·종목당)</h3>
+<table style="max-width:420px"><tr><th>월</th><th class=n>상한가 (‰)</th><th class=n>하한가 (‱)</th></tr><tr><td>1월</td><td class=n>2.68</td><td class=n>0.70</td></tr><tr><td>2월</td><td class=n>2.52</td><td class=n>1.70</td></tr><tr><td>3월</td><td class=n>2.47</td><td class=n>1.70</td></tr><tr><td>4월</td><td class=n>3.37</td><td class=n>0.90</td></tr><tr><td>5월</td><td class=n>2.61</td><td class=n>1.50</td></tr><tr><td>6월</td><td class=n>2.65</td><td class=n>1.40</td></tr><tr><td>7월</td><td class=n>2.38</td><td class=n>2.80</td></tr><tr><td>8월</td><td class=n>2.05</td><td class=n>1.20</td></tr><tr><td>9월</td><td class=n>1.86</td><td class=n>1.30</td></tr><tr><td>10월</td><td class=n>1.71</td><td class=n>1.10</td></tr><tr><td>11월</td><td class=n>1.92</td><td class=n>1.20</td></tr><tr><td>12월</td><td class=n>2.61</td><td class=n>1.10</td></tr></table>
+<p class="note">‰는 1,000분의 1, ‱는 10,000분의 1입니다. 상한가는 4월에 가장 많고 9~11월에 적습니다. 하한가는 2~3월과 7월(2026년 폭락장)에 높습니다.</p></div>
+
+<h2>6. 실전 체크리스트</h2>
+<div class="card"><ol>
+<li><b>재료부터 확인:</b> 오늘 공시나 기사가 있는지, 시가총액 대비 크기가 의미 있는지(수주라면 시총의 30% 이상) 봅니다. 재료 없는 테마 수급 상한가는 지속성이 낮습니다.</li>
+<li><b>시가총액·주가:</b> 3천억 원 미만, 52주 고점 대비 크게 빠진 종목에서 상한가가 잦습니다. 대신 하한가 위험도 같이 큽니다.</li>
+<li><b>진입 시점:</b> 장중 +15%를 터치했다가 밀린 종목, 이미 +15~29% 오른 종목을 다음 날 추격하는 건 통계적으로 손실이었습니다.</li>
+<li><b>상한가 당일 거래량:</b> 적게 터지고 일찍 잠긴 상한가가 다음 날에도 강합니다. 거래량이 40배 넘게 폭발한 상한가는 이미 손바뀜이 끝났다는 신호입니다.</li>
+<li><b>손절:</b> -10%(초기 진입) 또는 -5%(상한가 추격)와 함께 3일 시간 손절. 손절가는 미리 주문으로 걸어 두되, 갭 하락으로 손절가보다 더 손해 볼 수 있다는 걸 감안해서 포지션 크기를 정합니다.</li>
+<li><b>비중:</b> 하한가가 연속으로 나오거나 거래정지가 되면 손절이 아예 안 됩니다. <b>한 종목 손실이 전체 자산의 1~2%를 넘지 않도록</b> 비중을 잡습니다. 예를 들어 -10% 손절이면 종목당 비중을 10~20% 이하로, 최악의 -50%까지 감안하면 그보다 더 작게 잡습니다.</li>
+<li><b>매도:</b> 상한가 다음 날은 77% 확률로 갭 상승해서 시작하고, 20일 뒤에는 68%가 상한가 가격보다 아래에 있습니다. <b>다음 날 아침 갭 상승 구간에서 분할 매도</b>하는 게 유리했습니다.</li>
+</ol></div>
+
+<h2>방법과 한계</h2>
+<div class="card note"><ul>
+<li>Yahoo Finance 일봉 기준입니다. 장중 시각(몇 시에 상한가에 잠겼는지)과 호가 잔량은 없어서 '체결 가능 여부'는 반영하지 못했습니다.</li>
+<li>상장폐지 종목이 빠져 있어(생존 편향) 손실과 하한가 위험이 과소평가돼 있습니다.</li>
+<li>수수료·세금, 슬리피지는 반영하지 않았습니다. 수익률이 1% 미만인 플러스 결과는 실전에서 사라질 수 있습니다.</li>
+<li>과거 통계이고 투자 권유가 아닙니다.</li>
+</ul></div>
+</main><div class="tip" id="tip"></div></div>
+<script>
+const D={"days": [{"k": "D-10", "vr": 0.6464097959601798, "vr3": 0.059002022926500336, "up10": 0.026298044504383007}, {"k": "D-9", "vr": 0.6321091623201646, "vr3": 0.050236008091706, "up10": 0.020903573836817263}, {"k": "D-8", "vr": 0.6508425390575764, "vr3": 0.05832771409305462, "up10": 0.027309507754551585}, {"k": "D-7", "vr": 0.666701428097072, "vr3": 0.06473364801078894, "up10": 0.027646662171274445}, {"k": "D-6", "vr": 0.6670196301836537, "vr3": 0.06641942009440324, "up10": 0.029669588671611596}, {"k": "D-5", "vr": 0.6822728268964745, "vr3": 0.07889413351314903, "up10": 0.03573836817262306}, {"k": "D-4", "vr": 0.7240571238667316, "vr3": 0.07855697909642616, "up10": 0.03405259608900876}, {"k": "D-3", "vr": 0.7574276543863974, "vr3": 0.09912339851652056, "up10": 0.039447066756574514}, {"k": "D-2", "vr": 0.7834055049179532, "vr3": 0.11395819285232636, "up10": 0.04045853000674309}, {"k": "D-1", "vr": 0.952098231418946, "vr3": 0.17768037761294672, "up10": 0.06574511126095751}], "sigs": [{"k": "기준(아무 날)", "lu10": 0.01915, "ev": -0.0011506313787628686}, {"k": "A 거래량↑+5~15%", "lu10": 0.04057428214731586, "ev": 0.0061696590796735005}, {"k": "B A+낙폭과대", "lu10": 0.0500600720865038, "ev": 0.006949502564005534}, {"k": "C 15~29% 급등", "lu10": 0.07825847340865252, "ev": -0.02075151190530558}, {"k": "D 장중+20% 윗꼬리", "lu10": 0.09257594822937264, "ev": -0.01127395257907277}, {"k": "E 상한가 다음날", "lu10": 0.13647301478171192, "ev": -0.016195428079503412}, {"k": "F 상한가 종가", "lu10": 0.19098417068134893, "ev": 0.013696349668208147}]};
+const css=n=>getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(n).trim();
+const tip=document.getElementById('tip');
+function showTip(e,h){tip.innerHTML=h;tip.style.display='block';tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px'}
+function hideTip(){tip.style.display='none'}
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+const pct=(v,d=1)=>(v*100).toFixed(d)+'%';
+function bar(x,y,w,h,fill,p,r=4){if(h<=0)return;r=Math.min(r,w/2,h);
+ return el('path',{d:`M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`,fill},p)}
+function hbar(x,y,w,h,fill,p,r=4){if(w<=0)return;r=Math.min(r,h/2,w);
+ return el('path',{d:`M${x},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h-r}Q${x+w},${y+h} ${x+w-r},${y+h}H${x}Z`,fill},p)}
+function preChart(){const box=document.getElementById('c-pre');box.innerHTML='';
+ const W=box.clientWidth,H=220,m={l:40,r:8,t:16,b:26},s=el('svg',{width:W,height:H},box);
+ const data=D.days,max=1.2,iw=W-m.l-m.r,ih=H-m.t-m.b,y=v=>m.t+ih-v/max*ih,bw=iw/data.length;
+ [0,0.4,0.8,1.2].forEach(v=>{el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:css(v?'--grid':'--axis')},s);
+  el('text',{x:m.l-6,y:y(v)+4,'text-anchor':'end'},s).textContent=v.toFixed(1)+'배'});
+ el('line',{x1:m.l,x2:W-m.r,y1:y(1),y2:y(1),stroke:css('--muted'),'stroke-dasharray':'4 4'},s);
+ el('text',{x:W-m.r,y:y(1)-4,'text-anchor':'end'},s).textContent='평소 수준';
+ data.forEach((d,i)=>{const x=m.l+i*bw+bw*0.2,w=bw*0.6;bar(x,y(d.vr),w,m.t+ih-y(d.vr),css('--series-1'),s);
+  el('text',{x:x+w/2,y:H-8,'text-anchor':'middle',class:'lab'},s).textContent=d.k;
+  el('text',{x:x+w/2,y:y(d.vr)-4,'text-anchor':'middle'},s).textContent=d.vr.toFixed(2);
+  const h=el('rect',{x:m.l+i*bw,y:m.t,width:bw,height:ih,fill:'transparent'},s);
+  h.addEventListener('mousemove',e=>showTip(e,`<b>${d.k}</b><br>거래량 중앙값 ${d.vr.toFixed(2)}배<br>3배 이상 급증 ${pct(d.vr3)}<br>+10% 이상 상승 ${pct(d.up10)}`));
+  h.addEventListener('mouseleave',hideTip)})}
+function sigChart(){const box=document.getElementById('c-sig');box.innerHTML='';
+ const data=D.sigs,W=box.clientWidth,row=30,m={l:140,r:150,t:4,b:4},H=m.t+m.b+row*data.length,s=el('svg',{width:W,height:H},box);
+ const max=Math.max(...data.map(d=>d.lu10)),iw=W-m.l-m.r;
+ data.forEach((d,i)=>{const y0=m.t+i*row;
+  el('text',{x:m.l-8,y:y0+row/2+4,'text-anchor':'end',class:'lab'},s).textContent=d.k;
+  hbar(m.l,y0+7,d.lu10/max*iw,row-14,css(i?'--series-1':'--muted'),s);
+  const t=el('text',{x:m.l+d.lu10/max*iw+6,y:y0+row/2+4,class:'lab'},s);t.textContent=pct(d.lu10)+'  ·  기대값 '+(d.ev>0?'+':'')+pct(d.ev,2);
+  const h=el('rect',{x:0,y:y0,width:W,height:row,fill:'transparent'},s);
+  h.addEventListener('mousemove',e=>showTip(e,`<b>${d.k}</b><br>10일 내 상한가 ${pct(d.lu10)}<br>-10% 손절 시 평균 수익 ${(d.ev>0?'+':'')+pct(d.ev,2)}`));
+  h.addEventListener('mouseleave',hideTip)})}
+function draw(){preChart();sigChart()}draw();addEventListener('resize',draw);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+</script></body></html>
