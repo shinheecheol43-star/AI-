@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:"NotoKR";font-weight:400;src:url(fonts/noto-sans-kr-korean-400-normal.woff2) format("woff2");}
+@font-face{font-family:"NotoKR";font-weight:700;src:url(fonts/noto-sans-kr-korean-700-normal.woff2) format("woff2");}
+@font-face{font-family:"NotoKRL";font-weight:400;src:url(fonts/noto-sans-kr-latin-400-normal.woff2) format("woff2");}
+@font-face{font-family:"NotoKRL";font-weight:700;src:url(fonts/noto-sans-kr-latin-700-normal.woff2) format("woff2");}
+:root{--teal:#008485;--teal-d:#006d6e;--teal-l:#e6f4f4;--ink:#1d1d1f;--ink2:#52514e;--muted:#8a8a8e;--line:#e2e6e6;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#c0262d;--warn-bg:#fff6e5;--warn:#b26b00;--good-bg:#eaf6ee;--good:#1d7a3a;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"NotoKRL","NotoKR",sans-serif;color:var(--ink);background:#fff;}
+.sheet{width:1600px;height:1000px;padding:44px 52px;position:relative;background:#fbfcfc;overflow:hidden;}
+.sheet+.sheet{margin-top:40px;}
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid var(--teal);padding-bottom:14px;margin-bottom:28px;}
+.head h1{font-size:34px;margin:0;}
+.head .no{font-size:18px;color:var(--teal);font-weight:700;}
+.head .note{font-size:15px;color:var(--muted);}
+/* ---------- flow ---------- */
+.banner{background:var(--teal);color:#fff;border-radius:14px;padding:18px 26px;font-size:24px;font-weight:700;text-align:center;margin-bottom:30px;}
+.banner span{font-weight:400;font-size:19px;opacity:.9;margin-left:10px;}
+.flow{display:flex;align-items:stretch;gap:0;}
+.stage{flex:1;background:#fff;border:2px solid var(--line);border-radius:16px;padding:20px 18px;display:flex;flex-direction:column;}
+.stage .when{font-size:15px;color:var(--teal);font-weight:700;}
+.stage h3{font-size:23px;margin:4px 0 12px;}
+.stage ul{margin:0;padding-left:18px;font-size:16px;line-height:1.55;color:var(--ink2);flex:1;}
+.stage .msg{margin-top:12px;background:var(--teal-l);border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.45;}
+.stage.hot{border-color:var(--teal);}
+.arrow{width:34px;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--teal);}
+.rules{display:flex;gap:20px;margin-top:28px;}
+.rule{flex:1;border-radius:12px;padding:16px 20px;font-size:18px;background:#fff;border:2px dashed var(--teal);}
+.rule b{color:var(--teal-d);}
+/* ---------- phones ---------- */
+.phones{display:flex;gap:34px;justify-content:center;align-items:flex-start;}
+.phone{width:340px;height:720px;border-radius:40px;background:#111;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);flex:none;}
+.screen{width:100%;height:100%;border-radius:30px;background:#fff;overflow:hidden;display:flex;flex-direction:column;}
+.bar{background:var(--teal);color:#fff;padding:16px 18px 12px;}
+.bar .t{font-size:13px;opacity:.85;}
+.bar .h{font-size:19px;font-weight:700;}
+.body{padding:14px 16px;font-size:14px;line-height:1.5;flex:1;display:flex;flex-direction:column;gap:10px;}
+.lbl{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{border:1.5px solid var(--line);border-radius:999px;padding:4px 11px;font-size:13px;color:var(--ink2);}
+.chip.on{border-color:var(--teal);background:var(--teal);color:#fff;font-weight:700;}
+.field{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;}
+.field .v{font-size:18px;font-weight:700;}
+.calc{font-size:12.5px;color:var(--teal-d);}
+.mini{width:100%;border-collapse:collapse;font-size:12px;}
+.mini th,.mini td{border-bottom:1px solid var(--line);padding:4px 3px;text-align:right;}
+.mini th:first-child,.mini td:first-child{text-align:left;}
+.mini th{color:var(--muted);font-weight:700;}
+.mini .me{color:var(--teal-d);font-weight:700;background:var(--teal-l);}
+.btn{background:var(--teal);color:#fff;text-align:center;border-radius:12px;padding:11px;font-weight:700;font-size:15px;margin-top:auto;}
+.btn2{border:1.5px solid var(--line);text-align:center;border-radius:10px;padding:7px;font-size:13px;color:var(--ink2);}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto;}
+.card{border-radius:14px;padding:12px 13px;}
+.card.warn{background:var(--warn-bg);border:1.5px solid #f2c97a;}
+.card.good{background:var(--good-bg);border:1.5px solid #a9d8b8;}
+.card .ic{font-size:13px;font-weight:700;}
+.card.warn .ic{color:var(--warn);}
+.card.good .ic{color:var(--good);}
+.big{font-size:17px;font-weight:700;line-height:1.4;}
+.row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--line);}
+.row b{font-size:14px;}
+.cap{text-align:center;font-size:17px;font-weight:700;margin-top:12px;color:var(--ink);}
+.capw{display:flex;flex-direction:column;align-items:center;}
+.virtual{position:absolute;right:52px;bottom:22px;font-size:14px;color:var(--muted);}
+svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
+</style>
+</head>
+<body>
+
+<!-- ================= 1. 서비스 흐름도 ================= -->
+<div class="sheet" id="img1">
+  <div class="head"><div><div class="no">첨부 1</div><h1>서비스 흐름 — 매수 전에 정하고, 순간마다 약속을 꺼내 보여준다</h1></div><div class="note">신청한 손님만 이용하는 '선택한 보호'</div></div>
+  <div class="banner">예측 말고 대응 — 대응은 매수하기 전에 정한다<span>결정은 손님이, 앱은 손님의 약속을 기억한다</span></div>
+  <div class="flow">
+    <div class="stage hot"><div class="when">STEP 1 · 매수 전</div><h3>나의 매매 플랜</h3>
+      <ul><li>스타일: 단기 · 스윙 · 장기</li><li>최대 손실 <b>금액</b> → 손절가·수량 계산</li><li>익절 목표 + 분할 익절</li><li>손절·익절 후 시나리오</li><li>AI로 플랜 다듬기 (하나Q)</li></ul>
+      <div class="msg">"최대 10만원까지 잃을 수 있어요 → 손절가 9,000원 · 최대 100주"</div></div>
+    <div class="arrow">›</div>
+    <div class="stage"><div class="when">STEP 2 · 매수 직후</div><h3>단타 모드</h3>
+      <ul><li>정규장 · 새 매수 체결 직후만</li><li>AI가 차트를 한 줄로 요약</li><li>"어떤 근거로 매수하셨나요?"</li><li>빠른 버튼 + 직접 입력</li></ul>
+      <div class="msg">"5분 만에 +8% 오른 상태에서 매수하셨어요"</div></div>
+    <div class="arrow">›</div>
+    <div class="stage"><div class="when">STEP 3 · 보유 중</div><h3>감정의 순간 가드</h3>
+      <ul><li>물타기 가드 (공포)</li><li>추격매수 가드 (탐욕)</li><li>"더 오를까" → 지킬 수익부터</li><li>스타일 이탈 감지</li><li>레버리지 급락 체험</li></ul>
+      <div class="msg">"처음 계획은 -10%면 정리, 지금 -15%예요"</div></div>
+    <div class="arrow">›</div>
+    <div class="stage hot"><div class="when">STEP 4 · 매도 후</div><h3>계획의 실행</h3>
+      <ul><li>체결 후에만 짧게 알림</li><li>수익이 아니라 원칙 준수를 칭찬</li><li>미리 정한 다음 시나리오 안내</li></ul>
+      <div class="msg">"정하신 12,000원에서 절반 익절 완료. 원칙을 잘 지키셨어요"</div></div>
+    <div class="arrow">›</div>
+    <div class="stage"><div class="when">STEP 5 · 월간</div><h3>복기 리포트</h3>
+      <ul><li>계획대로 vs 마음 바꾼 매매</li><li>근거별 결과 (단타 모드)</li><li>나의 반복 실수 패턴</li></ul>
+      <div class="msg">"'급등 따라가기' 매수는 10번 중 2번만 수익"</div></div>
+  </div>
+  <div class="rules">
+    <div class="rule"><b>계획된 매매는 방해하지 않는다</b><br>카드는 계획에 없던 매수에만 한 번 · 선택은 손님</div>
+    <div class="rule"><b>사실과 계산만 보여준다</b><br>종목 의견·추천 없음 · 플랜은 언제든 변경 가능</div>
+    <div class="rule"><b>떠났다 돌아와도 이어진다</b><br>껐다 켜도 플랜·매매 일지가 그대로</div>
+  </div>
+  <div class="virtual">※ 서비스 구조 예시 (가상)</div>
+</div>
+
+<!-- ================= 2. 매수 플랜 + 레버리지 ================= -->
+<div class="sheet" id="img2">
+  <div class="head"><div><div class="no">첨부 2</div><h1>매수 전 화면 — 나의 매매 플랜 · 레버리지 급락 체험</h1></div><div class="note">예시 숫자: 1만원 × 100주 / 레버리지 500만원 투자</div></div>
+  <div class="phones">
+    <div class="capw"><div class="phone"><div class="screen">
+      <div class="bar"><div class="t">매수 전 · 30초</div><div class="h">나의 매매 플랜</div></div>
+      <div class="body">
+        <div><div class="lbl">① 이번 매매는?</div><div class="chips"><span class="chip on">단기</span><span class="chip">스윙</span><span class="chip">장기</span><span class="chip">잘 모르겠어요</span></div>
+          <div class="calc" style="margin-top:4px">단기: 며칠 안에 정리, 빠른 손절이 핵심</div></div>
+        <div class="field"><div class="lbl">② 이 포지션에서 최대 얼마까지 잃을 수 있나요?</div><div class="v">100,000원</div><div class="calc">→ 손절가 9,000원 · 최대 100주</div></div>
+        <div class="field"><div class="lbl">③ 목표 수익</div><div class="v">+200,000원</div><div class="calc">→ 목표가 12,000원 · 절반 익절 후 나머지는 11,000원 이익보존</div></div>
+        <div><div class="lbl">💡 분할 익절이 왜 좋아요?</div>
+          <table class="mini"><tr><th>그 뒤 주가</th><th>전량</th><th>버팀</th><th class="me">분할</th></tr>
+          <tr><td>14,000원 상승</td><td>+20만</td><td>+40만</td><td class="me">+30만</td></tr>
+          <tr><td>10,000원 복귀</td><td>+20만</td><td>0</td><td class="me">+15만</td></tr></table></div>
+        <div><div class="lbl">④ 매도 후 시나리오</div><div class="chips"><span class="chip on">손절 후: 9,500원 회복 시 알림</span><span class="chip on">익절 후: 졸업</span></div></div>
+        <div class="btn">플랜 저장 · 자동감시주문 연결</div>
+      </div></div></div><div class="cap">매수 전에 정하는 3가지</div></div>
+
+    <div class="capw"><div class="phone" style="width:560px"><div class="screen">
+      <div class="bar"><div class="t">레버리지 모드 · 매수 전 확인</div><div class="h">급락이 오면 내 500만원은?</div></div>
+      <div class="body">
+        <div style="font-size:13px;color:var(--ink2)">첫날 -10% 급락 후 +5%, -5%를 반복(횡보)했을 때 · 내 투자금 기준 계산</div>
+        <svg width="510" height="300" viewBox="0 0 510 300" role="img" aria-label="본주, 2배, 3배 레버리지의 평가금액 변화">
+          <!-- axes: x 0..5 days -> 50..400 ; y 300..520만원 -> 260..20 -->
+          <g stroke="#e2e6e6" stroke-width="1">
+            <line x1="50" y1="20" x2="400" y2="20"/><line x1="50" y1="80" x2="400" y2="80"/><line x1="50" y1="140" x2="400" y2="140"/><line x1="50" y1="200" x2="400" y2="200"/><line x1="50" y1="260" x2="400" y2="260"/>
+          </g>
+          <g font-size="11" fill="#8a8a8e" text-anchor="end">
+            <text x="44" y="24">520</text><text x="44" y="84">460</text><text x="44" y="144">400</text><text x="44" y="204">340</text><text x="44" y="264">280</text>
+          </g>
+          <text x="10" y="12" font-size="11" fill="#8a8a8e">(만원)</text>
+          <line x1="50" y1="40" x2="400" y2="40" stroke="#52514e" stroke-width="1.2" stroke-dasharray="4 4"/>
+          <text x="398" y="35" font-size="11" fill="#52514e" text-anchor="end">원금 500만원</text>
+          <g font-size="11" fill="#8a8a8e" text-anchor="middle">
+            <text x="50" y="280">매수</text><text x="120" y="280">1일 -10%</text><text x="190" y="280">2일 +5%</text><text x="260" y="280">3일 -5%</text><text x="330" y="280">4일 +5%</text><text x="400" y="280">5일 -5%</text>
+          </g>
+          <!-- y = 260 - (v-280)*1 -->
+          <polyline fill="none" stroke="#2a78d6" stroke-width="2.5" stroke-linejoin="round" points="50,40 120,90 190,67.5 260,91.1 330,68.7 400,92.2"/>
+          <polyline fill="none" stroke="#eb6834" stroke-width="2.5" stroke-linejoin="round" points="50,40 120,140 190,100 260,144 330,104.4 400,148"/>
+          <polyline fill="none" stroke="#c0262d" stroke-width="3" stroke-linejoin="round" points="50,40 120,190 190,137.5 260,197.9 330,146.6 400,205.6"/>
+          <g><circle cx="400" cy="92.2" r="4.5" fill="#2a78d6" stroke="#fff" stroke-width="2"/><circle cx="400" cy="148" r="4.5" fill="#eb6834" stroke="#fff" stroke-width="2"/><circle cx="400" cy="205.6" r="5" fill="#c0262d" stroke="#fff" stroke-width="2"/></g>
+          <g font-size="12.5" fill="#1d1d1f">
+            <text x="410" y="96"><tspan font-weight="700">본주</tspan> 448만원</text>
+            <text x="410" y="152"><tspan font-weight="700">2배</tspan> 392만원</text>
+            <text x="410" y="210"><tspan font-weight="700">3배</tspan> 334만원</text>
+          </g>
+        </svg>
+        <div style="display:flex;gap:8px">
+          <div class="card warn" style="flex:1"><div class="ic">⚠ 원금을 되찾으려면</div><div style="font-size:13px">본주 <b>+12%</b> · 2배 <b>+28%</b> · 3배 <b>+50%</b> 필요</div></div>
+          <div class="card warn" style="flex:1"><div class="ic">⚠ 제자리 횡보만 해도</div><div style="font-size:13px">+10%·-10% 반복 시<br>본주 495 · 2배 480 · <b>3배 455만원</b></div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">과거 데이터 기반 계산 예시이며 미래 수익률을 예측하지 않습니다. 이해도 확인 3문항 후 매수할 수 있어요.</div>
+      </div></div></div><div class="cap">레버리지는 '내 돈'으로 먼저 체험한다</div></div>
+  </div>
+  <div class="virtual">※ 화면 예시 (가상)</div>
+</div>
+
+<!-- ================= 3. 감정의 순간 & 매도 후 ================= -->
+<div class="sheet" id="img3">
+  <div class="head"><div><div class="no">첨부 3</div><h1>순간마다 꺼내 보여주는 나의 약속</h1></div><div class="note">계획된 매매는 방해하지 않고, 계획에 없던 순간에만 한 번</div></div>
+  <div class="phones" style="gap:26px">
+    <div class="capw"><div class="phone"><div class="screen">
+      <div class="bar"><div class="t">보유 중 · 추가 매수 주문</div><div class="h">물타기 전에 확인해요</div></div>
+      <div class="body">
+        <div class="card warn"><div class="ic">⚠ 계획에 없던 추가 매수예요</div><div class="big">처음 계획: 단기, -10%면 정리<br>지금: -15%</div></div>
+        <div class="row"><span>평균 단가</span><b>10,000 → 9,250원</b></div>
+        <div class="row"><span>이 종목 비중</span><b>30% → 55%</b></div>
+        <div class="row"><span>여기서 15% 더 내리면</span><b>-28만 → -41만원</b></div>
+        <div class="lbl" style="margin-top:4px">원금 회복에 필요한 상승률</div>
+        <div class="row"><span>-20% 손실</span><b>+25%</b></div>
+        <div class="row"><span>-50% 손실</span><b>+100%</b></div>
+        <div class="btns"><div class="btn2">플랜 바꾸고 진행</div><div class="btn2">그대로 진행</div><div class="btn2">취소</div><div class="btn2" style="border-color:var(--teal);color:var(--teal-d);font-weight:700">내일 다시 생각하기</div></div>
+      </div></div></div><div class="cap">물타기 가드 (공포)</div></div>
+
+    <div class="capw"><div class="phone"><div class="screen">
+      <div class="bar"><div class="t">익절 후 · 다시 매수 주문</div><div class="h">추격매수 전에 확인해요</div></div>
+      <div class="body">
+        <div class="card warn"><div class="ic">⚠ 판 가격보다 비싸게 다시 사요</div><div class="big">12,000원에 익절<br>지금 13,800원 (+15%)</div></div>
+        <div style="font-size:13.5px">처음 정한 익절 후 시나리오는<br><b>'11,000원까지 내려오면 재진입'</b>이었어요.</div>
+        <div class="card" style="background:var(--teal-l)"><div class="ic" style="color:var(--teal-d)">진행하려면 새 플랜이 필요해요</div><div style="font-size:13px">스타일 · 최대 손실 금액을 다시 정하면<br>앞서 번 +20만원을 지키는 선이 보여요.</div></div>
+        <div class="btns"><div class="btn2" style="border-color:var(--teal);color:var(--teal-d);font-weight:700">새 플랜 작성</div><div class="btn2">취소</div></div>
+      </div></div></div><div class="cap">추격매수 가드 (탐욕)</div></div>
+
+    <div class="capw"><div class="phone"><div class="screen">
+      <div class="bar"><div class="t">매수 체결 직후 · 단타 모드</div><div class="h">어떤 근거로 매수하셨나요?</div></div>
+      <div class="body">
+        <div class="card" style="background:#f3f5f7"><div class="ic" style="color:var(--ink2)">AI 차트 요약</div><div style="font-size:14px"><b>5분 만에 +8%</b> 오른 상태,<br>거래량 <b>평소의 5배</b>에서 매수하셨어요.</div></div>
+        <div class="chips"><span class="chip">뉴스·공시</span><span class="chip">차트 돌파</span><span class="chip">남의 추천</span><span class="chip on">급등 따라가기</span><span class="chip">그냥 느낌</span></div>
+        <div class="field" style="color:var(--muted);font-size:13px">직접 입력하시면 더 자세한 분석이 가능합니다.</div>
+        <div class="lbl" style="margin-top:6px">월간 복기 미리보기</div>
+        <div class="row"><span>급등 따라가기</span><b>10번 중 2번 수익</b></div>
+        <div class="row"><span>뉴스·공시</span><b>8번 중 5번 수익</b></div>
+        <div style="font-size:12px;color:var(--muted)">정규장 시간, 새 매수 체결 직후에만 물어봐요.</div>
+      </div></div></div><div class="cap">단타 모드 근거 인터뷰</div></div>
+
+    <div class="capw"><div class="phone"><div class="screen">
+      <div class="bar"><div class="t">매도 체결 후</div><div class="h">계획의 실행</div></div>
+      <div class="body">
+        <div class="card good"><div class="ic">✓ 익절 완료</div><div class="big">정하신 12,000원(+20%)에서<br>절반 익절을 완료했어요.</div><div style="margin-top:4px;font-weight:700;color:var(--good)">원칙을 잘 지키셨어요.</div></div>
+        <div class="card good"><div class="ic">✓ 손절 완료</div><div style="font-size:14px">정하신 손절선 9,000원에서 정리했어요.<br><b>손절은 실패가 아니라 계획의 실행입니다.</b></div><div style="font-size:13px;margin-top:4px">다음 시나리오: 9,500원 회복 시 알림</div></div>
+        <div class="row"><span>이번 달 원칙 지킨 매매</span><b>7 / 9회</b></div>
+        <div style="font-size:12px;color:var(--muted)">칭찬은 수익이 아니라 원칙을 지켰는지에 드려요.</div>
+      </div></div></div><div class="cap">매도 후 원칙 준수 확인</div></div>
+  </div>
+  <div class="virtual">※ 화면 예시 (가상) · 숫자는 계산 예시</div>
+</div>
+
+</body>
+</html>
