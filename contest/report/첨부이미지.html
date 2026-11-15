@@ -65,6 +65,14 @@ body{margin:0;font-family:"NotoKRL","NotoKR",sans-serif;color:var(--ink);backgro
 .row b{font-size:14px;}
 .cap{text-align:center;font-size:17px;font-weight:700;margin-top:12px;color:var(--ink);}
 .capw{display:flex;flex-direction:column;align-items:center;}
+.ba{width:100%;border-collapse:separate;border-spacing:0;margin-top:22px;font-size:16px;background:#fff;border:2px solid var(--line);border-radius:12px;overflow:hidden;}
+.ba th,.ba td{padding:7px 14px;border-bottom:1px solid var(--line);text-align:left;}
+.ba tr:last-child td{border-bottom:none;}
+.ba th{background:var(--teal-l);color:var(--teal-d);font-size:15px;}
+.ba td.k{font-weight:700;width:150px;}
+.ba td.b{color:var(--ink2);}
+.ba td.a{font-weight:700;}
+.ba td.ar{color:var(--teal);width:30px;text-align:center;font-weight:700;}
 .virtual{position:absolute;right:52px;bottom:22px;font-size:14px;color:var(--muted);}
 svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
 </style>
@@ -72,12 +80,12 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
 <body>
 
 <!-- ================= 1. 서비스 흐름도 ================= -->
-<div class="sheet" id="img1">
+<div class="sheet" id="img1" style="height:1190px">
   <div class="head"><div><div class="no">첨부 1</div><h1>하나뿐인 약속노트 — 매수 전에 쓰고, 순간마다 꺼내 보여준다</h1></div><div class="note">신청한 손님만 이용하는 '선택한 보호'</div></div>
   <div class="banner">예측 말고 대응 — 대응은 매수하기 전에 정한다<span>결정은 손님이, 앱은 손님의 약속을 기억한다</span></div>
   <div class="flow">
     <div class="stage hot"><div class="when">STEP 1 · 매수 전</div><h3>약속노트 쓰기</h3>
-      <ul><li>스타일: 단기 · 스윙 · 장기</li><li>최대 손실 <b>금액</b> → 손절가·수량 계산</li><li>익절 목표 + 분할 익절</li><li>손절·익절 후 시나리오</li><li>AI로 플랜 다듬기 (하나Q)</li></ul>
+      <ul><li>스타일: 단기 · 스윙 · 장기</li><li>최대 손실 <b>금액</b> → 손절가·수량 계산</li><li>익절 목표 + 분할 익절</li><li>손절·익절 후 시나리오</li><li>AI로 약속 다듬기 (하나Q)</li></ul>
       <div class="msg">"최대 10만원까지 잃을 수 있어요 → 손절가 9,000원 · 최대 100주"</div></div>
     <div class="arrow">›</div>
     <div class="stage"><div class="when">STEP 2 · 매수 직후</div><h3>단타 모드</h3>
@@ -98,9 +106,18 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   </div>
   <div class="rules">
     <div class="rule"><b>계획된 매매는 방해하지 않는다</b><br>카드는 계획에 없던 매수에만 한 번 · 선택은 손님</div>
-    <div class="rule"><b>사실과 계산만 보여준다</b><br>종목 의견·추천 없음 · 플랜은 언제든 변경 가능</div>
-    <div class="rule"><b>떠났다 돌아와도 이어진다</b><br>껐다 켜도 플랜·매매 일지가 그대로</div>
+    <div class="rule"><b>사실과 계산만 보여준다</b><br>종목 의견·추천 없음 · 약속은 언제든 변경 가능</div>
+    <div class="rule"><b>떠났다 돌아와도 이어진다</b><br>껐다 켜도 약속·매매 일지가 그대로</div>
   </div>
+  <table class="ba">
+    <tr><th>상황</th><th>적용 전</th><th></th><th>적용 후</th></tr>
+    <tr><td class="k">매수할 때</td><td class="b">얼마를 잃을지 모른 채 매수</td><td class="ar">→</td><td class="a">"이번엔 최대 10만원까지"를 약속하고 매수</td></tr>
+    <tr><td class="k">떨어질 때</td><td class="b">감으로 물타기</td><td class="ar">→</td><td class="a">처음 약속과 내 돈 기준 숫자를 보고 결정</td></tr>
+    <tr><td class="k">오를 때</td><td class="b">"더 오를까"로 익절을 미루다 반납, 판 뒤 추격매수</td><td class="ar">→</td><td class="a">약속한 지점에서 분할 익절, 약속한 조건에서만 재진입</td></tr>
+    <tr><td class="k">물렸을 때</td><td class="b">"원래 장기투자였다"며 방치</td><td class="ar">→</td><td class="a">스타일 이탈 알림으로 약속 재점검</td></tr>
+    <tr><td class="k">레버리지</td><td class="b">교육은 클릭으로 이수</td><td class="ar">→</td><td class="a">내 돈으로 급락 결과를 보고 이해한 뒤 매수</td></tr>
+    <tr><td class="k">매도한 뒤</td><td class="b">손절은 패배, 만회하려는 보복 매매</td><td class="ar">→</td><td class="a">"계획의 실행입니다" + 미리 정한 다음 시나리오</td></tr>
+  </table>
   <div class="virtual">※ 서비스 구조 예시 (가상)</div>
 </div>
 
