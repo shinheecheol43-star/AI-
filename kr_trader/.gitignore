@@ -1,0 +1,8 @@
+config.env
+state.json
+state.lock
+token.json
+trades.csv
+logs/
+cache/
+__pycache__/
