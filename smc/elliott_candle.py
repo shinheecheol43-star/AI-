@@ -75,6 +75,7 @@ def run(tf: str, k: float):
         h = (d.high if s > 0 else -d.low).to_numpy()
         l = (d.low if s > 0 else -d.high).to_numpy()
         a = d.atr.to_numpy()
+        trend = (np.sign(d.close - d.close.ewm(span=200, adjust=False).mean()) * s).to_numpy()
         for n in range(1, len(piv)):
             (i0, p0, t0, _), (i1, p1, t1, conf1) = piv[n - 1], piv[n]
             if t0 != -s or t1 != s:                         # 롱: 저점(0) → 고점(1)
@@ -110,7 +111,8 @@ def run(tf: str, k: float):
                             j = min(len(d) - 1, i + 120); ex = c[j]
                         ret = (ex - entry) / abs(entry) - FEE
                         rows.append(dict(tf=tf, side=s, kind=kind, stop=stop_mode, time=d.time[i], r=ret / (dist / abs(entry)),
-                                         ret=ret, stop_pct=dist / abs(entry), why=why))
+                                         ret=ret, stop_pct=dist / abs(entry), why=why, exit=d.time[j], trend=trend[i] > 0,
+                                         struct=n))
                     break
     return pd.DataFrame(rows)
 
