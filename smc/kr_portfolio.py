@@ -41,6 +41,17 @@ ETFS = {"069500": "KODEX 200", "229200": "KODEX 코스닥150", "091160": "KODEX 
 INVERSE = "114800"
 
 
+def shares(code: str) -> float:
+    """야후 연간 보통주 수 중 가장 이른 값 (2022년 무렵). 액면분할은 과거 주가가 이미 조정돼 있어 그대로 곱해도 됨."""
+    import requests
+
+    r = requests.get(f"https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{code}.KS",
+                     params={"type": "annualOrdinarySharesNumber", "period1": 1420070400, "period2": 1800000000},
+                     headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+    vals = [v for v in r.json()["timeseries"]["result"][0].get("annualOrdinarySharesNumber", []) if v]
+    return float(vals[0]["reportedValue"]["raw"]) if vals else float("nan")
+
+
 def load(code):
     d = ss.fetch(code + ".KS")
     return d[(d.close > 0) & (d.volume >= 0)].reset_index(drop=True)
@@ -102,7 +113,7 @@ def main():
     short = short1
 
     # 후보 풀 데이터와 해마다 거래대금 순위
-    data, sector_of, tv = {}, {}, {}
+    data, sector_of, tv, cap = {}, {}, {}, {}
     for sec, members in POOL.items():
         for code, name in members.items():
             try:
@@ -114,15 +125,19 @@ def main():
             data[name], sector_of[name] = d, sec
             s = d.set_index("time")
             tv[name] = (s.close * s.volume).rolling(250, min_periods=200).mean()
+            cap[name] = s.close * shares(code)
     TV = pd.DataFrame(tv)
-    top10, sec5 = {}, {}
+    CAPS = pd.DataFrame(cap)
+    top10, sec5, cap10 = {}, {}, {}
     for y in YEARS:
         row = TV[TV.index < f"{y}-01-01"].iloc[-1].dropna()
         top10[y] = list(row.sort_values(ascending=False).index[:10])
+        crow = CAPS[CAPS.index < f"{y}-01-01"].iloc[-1].dropna()
+        cap10[y] = list(crow.sort_values(ascending=False).index[:10])
         sec5[y] = [n for sec in POOL for n in row[[m for m in row.index if sector_of[m] == sec]].sort_values(ascending=False).index[:5]]
-    print("\n  해마다 고른 거래대금 상위 10:")
+    print("\n  해마다 고른 시가총액 상위 10 (연초 직전 종가 × 상장주식수, 후보 풀 안에서):")
     for y in YEARS:
-        print(f"   {y}: {', '.join(top10[y])}")
+        print(f"   {y}: {', '.join(cap10[y])}")
 
     lt = {name: long_trades(d, 0.0015, name) for name, d in data.items()}
 
@@ -136,6 +151,8 @@ def main():
 
     etf_long = pd.concat([long_trades(load(c), 0.0005, n) for c, n in ETFS.items()], ignore_index=True)
     ports = {"ETF 만 (KODEX 7개 + 인버스)": (etf_long, short),
+             "(다) 시가총액 상위 10 + 인버스": (picked(cap10), short),
+             "(다) 시가총액 상위 10 롱만": (picked(cap10), short.iloc[0:0]),
              "(가) 거래대금 상위 10 + 인버스": (picked(top10), short),
              "(나) 섹터별 상위 5 + 인버스": (picked(sec5), short),
              "(가) 롱만 (숏 없음)": (picked(top10), short.iloc[0:0])}
