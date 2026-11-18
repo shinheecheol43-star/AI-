@@ -35,7 +35,7 @@ def prep(D):
     return D
 
 
-def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=False, tranches=3):
+def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=False, tranches=3, swlog=None):
     F, idx, st, weak, elig = D["F"], D["idx"], D["st"], D["weak"], D["elig"]
     i0, i1 = int(idx.searchsorted(pd.Timestamp(lo))), int(idx.searchsorted(pd.Timestamp(hi)))
     qc = F["QQQ"].close.to_numpy()
@@ -63,6 +63,8 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=Fal
                 cash += p["q"] * ex * (1 - COST)
                 last_exit[p["s"]] = i
                 pos.remove(p)
+                if swlog is not None:
+                    swlog.append(dict(s=p["s"], exit=idx[i], ret=ex / p["p0"] - 1 - 2 * COST))
         # --- 조정 매수 청산 (종가 판단)
         if dip:
             avg = dip["cost"] / dip["q"]
