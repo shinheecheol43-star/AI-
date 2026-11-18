@@ -35,7 +35,7 @@ def prep(D):
     return D
 
 
-def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None):
+def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=False, tranches=3):
     F, idx, st, weak, elig = D["F"], D["idx"], D["st"], D["weak"], D["elig"]
     i0, i1 = int(idx.searchsorted(pd.Timestamp(lo))), int(idx.searchsorted(pd.Timestamp(hi)))
     qc = F["QQQ"].close.to_numpy()
@@ -70,7 +70,10 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None):
             if dip["peak"] >= avg * 1.10:
                 dip["on"] = True
             why = None
-            if dip["on"] and c <= max(avg, dip["peak"] * 0.85):
+            if exit2y:
+                if i - dip["first_i"] >= 500:
+                    why = "2년"
+            elif dip["on"] and c <= max(avg, dip["peak"] * 0.85):
                 why = "수익권 손절"
             elif stop and c <= avg * (1 - stop):
                 why = "손절"
@@ -89,13 +92,13 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None):
         E = cash + val
         eq.append(E)
         # --- 조정 분할 매수
-        while armed and levels_used < 3 and dd[i] <= -(L + 10 * levels_used) / 100:
-            money = min(E * W / 3, cash)
+        while armed and levels_used < tranches and dd[i] <= -(L + 10 * levels_used) / 100:
+            money = min(E * W / tranches, cash)
             if money <= 0 and core_q > 0:                      # 평소 지수를 덜어서라도 조정 매수
-                take = min(core_q, E * W / 3 / c)
+                take = min(core_q, E * W / tranches / c)
                 core_q -= take
                 cash += take * c * (1 - COST)
-                money = min(E * W / 3, cash)
+                money = min(E * W / tranches, cash)
             if money > 0:
                 q = money / (c * (1 + COST))
                 if dip is None:
