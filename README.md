@@ -25,3 +25,12 @@ python3 -m http.server 8000
 - `js/indicators.js` – 지표 계산 (SMA, EMA, 볼린저, RSI, MACD, 헤이켄 아시, 크로스)
 - `js/data.js` – 바이낸스 시세 / 실시간 웹소켓 / 샘플 데이터
 - `lib/` – TradingView Lightweight Charts v4.2.0 (Apache-2.0)
+
+## 대화용 분석 도구
+
+```bash
+pip install pandas matplotlib koreanize-matplotlib
+python3 analysis/analyze.py BTCUSDT 1d --out chart.png
+```
+
+지표 요약(JSON)을 출력하고 차트 이미지(`chart.png`)를 저장해요.
