@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>나만의 차트</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">📈 나만의 차트</div>
+
+    <div class="group">
+      <input id="symbol" list="symbols" value="BTCUSDT" spellcheck="false" />
+      <datalist id="symbols">
+        <option value="BTCUSDT"></option>
+        <option value="ETHUSDT"></option>
+        <option value="SOLUSDT"></option>
+        <option value="XRPUSDT"></option>
+        <option value="DOGEUSDT"></option>
+      </datalist>
+    </div>
+
+    <div class="group" id="intervals">
+      <button data-interval="15m">15분</button>
+      <button data-interval="1h">1시간</button>
+      <button data-interval="4h">4시간</button>
+      <button data-interval="1d" class="active">일</button>
+      <button data-interval="1w">주</button>
+    </div>
+
+    <div class="group">
+      <select id="chartType">
+        <option value="candle">캔들</option>
+        <option value="heikin">헤이켄 아시</option>
+        <option value="line">라인</option>
+      </select>
+    </div>
+
+    <div class="group indicators">
+      <label><input type="checkbox" data-ind="ma" checked /> 이평선 20/60</label>
+      <label><input type="checkbox" data-ind="ema" /> EMA 12/26</label>
+      <label><input type="checkbox" data-ind="bb" /> 볼린저</label>
+      <label><input type="checkbox" data-ind="cross" checked /> 골든/데드크로스</label>
+      <label><input type="checkbox" data-ind="volume" checked /> 거래량</label>
+      <label><input type="checkbox" data-ind="rsi" checked /> RSI</label>
+      <label><input type="checkbox" data-ind="macd" checked /> MACD</label>
+    </div>
+
+    <div id="status" class="status"></div>
+  </header>
+
+  <div id="legend" class="legend"></div>
+
+  <main id="panes">
+    <div id="mainPane" class="pane main"></div>
+    <div id="rsiPane" class="pane sub"><span class="pane-title">RSI 14</span></div>
+    <div id="macdPane" class="pane sub"><span class="pane-title">MACD 12 26 9</span></div>
+  </main>
+
+  <script src="lib/lightweight-charts.standalone.production.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

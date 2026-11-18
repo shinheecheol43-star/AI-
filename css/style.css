@@ -1,0 +1,83 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0f1217;
+  color: #d1d4dc;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 13px;
+}
+
+body { display: flex; flex-direction: column; }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222731;
+  background: #151922;
+}
+
+.brand { font-weight: 700; font-size: 15px; }
+
+.group { display: flex; align-items: center; gap: 4px; }
+
+input#symbol, select {
+  background: #0f1217;
+  color: inherit;
+  border: 1px solid #2a2f3a;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+}
+input#symbol { width: 120px; text-transform: uppercase; font-weight: 600; }
+
+button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover { background: #222731; }
+button.active { background: #2962ff; color: #fff; }
+
+.indicators { flex-wrap: wrap; gap: 4px 12px; }
+.indicators label { cursor: pointer; user-select: none; white-space: nowrap; }
+
+.status { margin-left: auto; font-size: 12px; color: #8a8f9c; }
+.status.live::before { content: "●"; color: #26a69a; margin-right: 4px; }
+.status.sample::before { content: "●"; color: #f0b90b; margin-right: 4px; }
+
+.legend {
+  padding: 6px 12px;
+  font-size: 12px;
+  min-height: 26px;
+  color: #b2b5be;
+}
+.legend b { color: #fff; margin-right: 8px; }
+.legend .up { color: #26a69a; }
+.legend .down { color: #ef5350; }
+.legend span { margin-right: 10px; }
+
+#panes { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.pane { position: relative; border-top: 1px solid #222731; }
+.pane.main { flex: 3; min-height: 200px; }
+.pane.sub { flex: 1; min-height: 100px; }
+.pane.hidden { display: none; }
+
+.pane-title {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  z-index: 2;
+  font-size: 11px;
+  color: #8a8f9c;
+  pointer-events: none;
+}
