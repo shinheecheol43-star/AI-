@@ -35,7 +35,7 @@ def prep(D):
     return D
 
 
-def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=False, tranches=3, swlog=None):
+def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=False, tranches=3, swlog=None, contrib=0.0, reserve=None):
     F, idx, st, weak, elig = D["F"], D["idx"], D["st"], D["weak"], D["elig"]
     i0, i1 = int(idx.searchsorted(pd.Timestamp(lo))), int(idx.searchsorted(pd.Timestamp(hi)))
     qc = F["QQQ"].close.to_numpy()
@@ -45,8 +45,38 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=Fal
     dip = None                                   # {q, cost, n, first_i, peak, on}
     levels_used, armed = 0, True
     core_q, core_t = 0.0, None
+    rcash, rpos, rdeep, flows = 0.0, None, False, [(idx[i0], -1.0)]     # 예비금·예비금 매수분
+    ema20 = F["QQQ"].ema20.to_numpy()
     for i in range(i0, i1):
         c = qc[i]
+        if contrib and i > i0 and idx[i].month != idx[i - 1].month:     # 매달 첫 거래일 적립
+            flows.append((idx[i], -contrib))
+            if reserve:
+                rcash += contrib
+            else:
+                cash += contrib
+        if reserve:
+            X, sig, rexit = reserve
+            if rpos:
+                rpos["peak"] = max(rpos["peak"], c)
+                avg = rpos["cost"] / rpos["q"]
+                rpos["on"] = rpos["on"] or rpos["peak"] >= avg * 1.10
+                out = (rexit == "추적" and rpos["on"] and c <= max(avg, rpos["peak"] * 0.85)) or (rexit == "2년" and i - rpos["i"] >= 500)
+                if out:
+                    rcash += rpos["q"] * c * (1 - COST)
+                    rpos = None
+            if dd[i] <= -X:
+                rdeep = True
+            elif dd[i] > -0.05:
+                rdeep = False
+            if rdeep and rcash > 0 and (sig == "바로" or c > ema20[i]) and (rpos is None or rexit == "계속"):
+                q_ = rcash / (c * (1 + COST))
+                if rpos is None:
+                    rpos = dict(q=0.0, cost=0.0, i=i, peak=c, on=False)
+                rpos["q"] += q_
+                rpos["cost"] += q_ * c
+                rcash = 0.0
+                rdeep = False
         # --- 스윙 청산
         for p in list(pos):
             f = F[p["s"]]
@@ -92,7 +122,7 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=Fal
         val = sum(p["q"] * (F[p["s"]].close.iat[i] if np.isfinite(F[p["s"]].close.iat[i]) else p["p0"]) for p in pos)
         val += (dip["q"] * c if dip else 0) + core_q * c
         E = cash + val
-        eq.append(E)
+        eq.append(E + rcash + (rpos["q"] * c if rpos else 0))
         # --- 조정 분할 매수
         while armed and levels_used < tranches and dd[i] <= -(L + 10 * levels_used) / 100:
             money = min(E * W / tranches, cash)
@@ -157,6 +187,9 @@ def run(D, lo, hi, L=20, W=1.0, stop=None, core=0.0, S=0.6, log=None, exit2y=Fal
             cash -= money
             used += money
     eq = pd.Series(eq, index=idx[i0:i1])
+    if contrib:
+        flows.append((idx[i1 - 1], eq.iloc[-1]))
+        return {"eq": eq, "flows": flows, "final": eq.iloc[-1], "invested": -sum(v for _, v in flows[:-1])}
     return stats(eq) | {"eq": eq}
 
 
