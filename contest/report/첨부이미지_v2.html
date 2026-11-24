@@ -93,7 +93,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   <div class="flow">
     <div class="step"><div class="when">① 매수 전</div><h3>매매 계획 수립</h3>
       <div class="d">매매 기간, 최대 손실 금액, 목표 수익, 매도 후 대응을 손님이 직접 정함</div>
-      <div class="q"><span class="exb">예시</span>최대 손실 10만원 → 손절가 9천원 · 최대 매수 100주</div></div>
+      <div class="q"><span class="exb">예시</span>손절 -10%·최대 손실 10만원 → 최대 매수 100주</div></div>
     <div class="arrow">›</div>
     <div class="step"><div class="when">② 보유 중</div><h3>계획 외 거래 확인</h3>
       <div class="d">계획에 없던 추가매수·추격매수 때만 최초 계획을 다시 보여줌</div>
@@ -120,24 +120,25 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
 </div>
 
 <!-- ================= 첨부 2: 매수 전 화면 ================= -->
-<div class="sheet" id="img2">
+<div class="sheet" id="img2" style="height:1100px"><style>#img2 .phone{height:800px}</style>
   <div class="head"><div><div class="no">첨부 2</div><h1>매수 전 — 내 돈 기준으로 계획하고 확인한다</h1></div><div class="note">금액은 예시 · 1만원 종목 100주 / 레버리지 500만원</div></div>
   <div class="phones">
     <div class="capw"><div class="phone"><div class="screen">
       <div class="bar"><div class="t">하나뿐인 약속노트 · 매수 전<span class="ex">예시 화면</span></div><div class="h">이번 매매 계획</div></div>
-      <div class="body">
+      <div class="body" style="gap:10px">
+        <div style="font-size:14px;color:var(--ink2)"><span class="exb">예시</span>현재가 10,000원 종목</div>
         <div><div class="lbl">① 매매 기간</div><div class="chips"><span class="chip on">단기</span><span class="chip">중기</span><span class="chip">장기</span></div></div>
-        <div class="field"><div class="lbl">② 최대 손실 금액</div><div class="v">100,000원 <span class="exb">예시</span></div><div class="calc">→ 손절가 9,000원 · 최대 매수 수량 100주</div></div>
-        <div class="field"><div class="lbl">③ 목표 수익</div><div class="v">+200,000원 <span class="exb">예시</span></div><div class="calc">→ 목표가 12,000원에서 절반 매도</div></div>
-        <div><div class="lbl">분할 매도 결과 비교</div>
-          <table class="mini"><tr><th>이후 주가</th><th>일괄</th><th>보유</th><th class="me">분할</th></tr>
+        <div class="field"><div class="lbl">② 손절 기준</div><div class="v">-10%</div><div class="calc">→ 손절가 9,000원 (주당 손실 1,000원)</div></div>
+        <div class="field"><div class="lbl">③ 최대 손실 금액</div><div class="v">100,000원</div><div class="calc">→ 최대 매수 수량 100주 (10만원 ÷ 1,000원)</div></div>
+        <div class="field"><div class="lbl">④ 목표 수익</div><div class="v">+200,000원</div><div class="calc">→ 목표가 12,000원에서 절반 매도</div></div>
+        <table class="mini"><tr><th>이후 주가</th><th>일괄</th><th>보유</th><th class="me">분할</th></tr>
           <tr><td>14,000원</td><td>+20만</td><td>+40만</td><td class="me">+30만</td></tr>
-          <tr><td>10,000원</td><td>+20만</td><td>0</td><td class="me">+15만</td></tr></table></div>
-        <div><div class="lbl">④ 매도 후 대응</div><div class="chips"><span class="chip on">재매수 알림</span><span class="chip">매수 보류</span><span class="chip">거래 종료</span></div></div>
+          <tr><td>10,000원</td><td>+20만</td><td>0</td><td class="me">+15만</td></tr></table>
+        <div><div class="lbl">⑤ 매도 후 대응</div><div class="chips"><span class="chip on">재매수 알림</span><span class="chip">매수 보류</span><span class="chip">거래 종료</span></div></div>
         <div class="note">⚠ 갭하락 시 실제 손실이 한도를 넘을 수 있음</div>
         <div class="btn">계획 확인 · 감시주문 연동</div>
       </div></div></div>
-      <div class="cap">매매 계획 수립</div><div class="capd">금액만 입력하면 손절가와<br><b>최대 매수 수량까지 거꾸로 계산</b></div></div>
+      <div class="cap">매매 계획 수립</div><div class="capd">손절 기준과 손실 금액만 정하면<br><b>최대 매수 수량까지 거꾸로 계산</b></div></div>
 
     <div class="capw" style="width:640px"><div class="phone" style="width:600px"><div class="screen">
       <div class="bar"><div class="t">레버리지 상품 확인 · 매수 전<span class="ex">예시 화면</span></div><div class="h">급락 시 내 투자금 500만원은?</div></div>
@@ -155,9 +156,9 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
           <polyline fill="none" stroke="#eb6834" stroke-width="3" stroke-linejoin="round" points="50,50 126,150 202,110 278,154 354,114.4 430,158"/>
           <polyline fill="none" stroke="#c0262d" stroke-width="3.5" stroke-linejoin="round" points="50,50 126,200 202,147.5 278,207.9 354,156.6 430,215.6"/>
           <circle cx="430" cy="102.2" r="5" fill="#2a78d6" stroke="#fff" stroke-width="2"/><circle cx="430" cy="158" r="5" fill="#eb6834" stroke="#fff" stroke-width="2"/><circle cx="430" cy="215.6" r="5.5" fill="#c0262d" stroke="#fff" stroke-width="2"/>
-          <g font-size="15" fill="#1d1d1f"><text x="442" y="107"><tspan font-weight="700">1배</tspan> 448만원</text><text x="442" y="163"><tspan font-weight="700">2배</tspan> 392만원</text><text x="442" y="221"><tspan font-weight="700">3배</tspan> 334만원</text></g>
+          <g font-size="15" fill="#1d1d1f"><text x="442" y="107"><tspan font-weight="700">일반</tspan> 448만원</text><text x="442" y="163"><tspan font-weight="700">2배</tspan> 392만원</text><text x="442" y="221"><tspan font-weight="700">3배</tspan> 334만원</text></g>
         </svg>
-        <div class="card warn"><div class="ic">⚠ 원금을 되찾으려면</div><div style="font-size:16px">1배 <b>+12%</b> · 2배 <b>+28%</b> · 3배 <b style="color:var(--s3)">+50%</b> 상승이 필요합니다</div></div>
+        <div class="card warn"><div class="ic">⚠ 원금을 되찾으려면</div><div style="font-size:16px">일반 <b>+12%</b> · 2배 <b>+28%</b> · 3배 <b style="color:var(--s3)">+50%</b> 상승이 필요합니다</div></div>
         <div class="note">과거 데이터 기반 계산 예시이며 미래 수익률을 예측하지 않습니다.</div>
         <div class="btn">이해도 확인 3문항 후 매수</div>
       </div></div></div>
