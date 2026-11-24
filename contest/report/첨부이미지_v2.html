@@ -17,6 +17,8 @@ body{margin:0;font-family:"NotoKRL","NotoKR",sans-serif;color:var(--ink);backgro
 .head h1{font-size:36px;margin:0;}
 .head .no{font-size:18px;color:var(--teal);font-weight:700;}
 .head .note{font-size:16px;color:var(--muted);}
+.ex{display:inline-block;background:#fff;color:var(--teal-d);border:1.5px solid #fff;border-radius:6px;font-size:12px;font-weight:700;padding:0 6px;margin-left:6px;}
+.exb{display:inline-block;background:var(--warn-bg);color:var(--warn);border:1.5px solid #f2c97a;border-radius:6px;font-size:13px;font-weight:700;padding:0 7px;margin-right:6px;vertical-align:middle;}
 .virtual{position:absolute;right:56px;bottom:20px;font-size:14px;color:var(--muted);}
 .new{display:inline-block;background:var(--new);color:#fff;font-size:13px;font-weight:700;border-radius:6px;padding:2px 8px;margin-left:8px;vertical-align:middle;}
 /* image1 */
@@ -91,7 +93,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   <div class="flow">
     <div class="step"><div class="when">① 매수 전</div><h3>매매 계획 수립</h3>
       <div class="d">매매 기간, 최대 손실 금액, 목표 수익, 매도 후 대응을 손님이 직접 정함</div>
-      <div class="q">최대 손실 10만원 → 손절가 9천원 · 최대 매수 100주</div></div>
+      <div class="q"><span class="exb">예시</span>최대 손실 10만원 → 손절가 9천원 · 최대 매수 100주</div></div>
     <div class="arrow">›</div>
     <div class="step"><div class="when">② 보유 중</div><h3>계획 외 거래 확인</h3>
       <div class="d">계획에 없던 추가매수·추격매수 때만 최초 계획을 다시 보여줌</div>
@@ -122,11 +124,11 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   <div class="head"><div><div class="no">첨부 2</div><h1>매수 전 — 내 돈 기준으로 계획하고 확인한다</h1></div><div class="note">금액은 예시 · 1만원 종목 100주 / 레버리지 500만원</div></div>
   <div class="phones">
     <div class="capw"><div class="phone"><div class="screen">
-      <div class="bar"><div class="t">하나뿐인 약속노트 · 매수 전</div><div class="h">이번 매매 계획</div></div>
+      <div class="bar"><div class="t">하나뿐인 약속노트 · 매수 전<span class="ex">예시 화면</span></div><div class="h">이번 매매 계획</div></div>
       <div class="body">
         <div><div class="lbl">① 매매 기간</div><div class="chips"><span class="chip on">단기</span><span class="chip">중기</span><span class="chip">장기</span></div></div>
-        <div class="field"><div class="lbl">② 최대 손실 금액</div><div class="v">100,000원</div><div class="calc">→ 손절가 9,000원 · 최대 매수 수량 100주</div></div>
-        <div class="field"><div class="lbl">③ 목표 수익</div><div class="v">+200,000원</div><div class="calc">→ 목표가 12,000원에서 절반 매도</div></div>
+        <div class="field"><div class="lbl">② 최대 손실 금액</div><div class="v">100,000원 <span class="exb">예시</span></div><div class="calc">→ 손절가 9,000원 · 최대 매수 수량 100주</div></div>
+        <div class="field"><div class="lbl">③ 목표 수익</div><div class="v">+200,000원 <span class="exb">예시</span></div><div class="calc">→ 목표가 12,000원에서 절반 매도</div></div>
         <div><div class="lbl">분할 매도 결과 비교</div>
           <table class="mini"><tr><th>이후 주가</th><th>일괄</th><th>보유</th><th class="me">분할</th></tr>
           <tr><td>14,000원</td><td>+20만</td><td>+40만</td><td class="me">+30만</td></tr>
@@ -138,9 +140,9 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
       <div class="cap">매매 계획 수립</div><div class="capd">금액만 입력하면 손절가와<br><b>최대 매수 수량까지 거꾸로 계산</b></div></div>
 
     <div class="capw" style="width:640px"><div class="phone" style="width:600px"><div class="screen">
-      <div class="bar"><div class="t">레버리지 상품 확인 · 매수 전</div><div class="h">급락 시 내 투자금 500만원은?</div></div>
+      <div class="bar"><div class="t">레버리지 상품 확인 · 매수 전<span class="ex">예시 화면</span></div><div class="h">급락 시 내 투자금 500만원은?</div></div>
       <div class="body">
-        <div style="font-size:14px;color:var(--ink2)">첫날 -10% 급락 후 +5%, -5% 반복(횡보) 시</div>
+        <div style="font-size:14px;color:var(--ink2)"><span class="exb">예시</span>투자금 500만원, 첫날 -10% 급락 후 +5%, -5% 반복(횡보) 시</div>
         <svg width="560" height="320" viewBox="0 0 560 320" role="img" aria-label="1배, 2배, 3배 투자금 변화">
           <g stroke="#e2e6e6" stroke-width="1"><line x1="50" y1="30" x2="430" y2="30"/><line x1="50" y1="90" x2="430" y2="90"/><line x1="50" y1="150" x2="430" y2="150"/><line x1="50" y1="210" x2="430" y2="210"/><line x1="50" y1="270" x2="430" y2="270"/></g>
           <g font-size="12" fill="#8a8a8e" text-anchor="end"><text x="44" y="34">520</text><text x="44" y="94">460</text><text x="44" y="154">400</text><text x="44" y="214">340</text><text x="44" y="274">280</text></g>
@@ -169,7 +171,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   <div class="head"><div><div class="no">첨부 3</div><h1>판단의 순간마다 계획을 다시 보여준다</h1></div><div class="note">계획된 거래는 방해하지 않고, 계획 외 거래에만 한 번</div></div>
   <div class="phones" style="gap:40px">
     <div class="capw"><div class="phone"><div class="screen">
-      <div class="bar"><div class="t">보유 중 · 추가매수 주문</div><div class="h">계획에 없던 추가매수입니다</div></div>
+      <div class="bar"><div class="t">보유 중 · 추가매수 주문<span class="ex">예시 화면</span></div><div class="h">계획에 없던 추가매수입니다</div></div>
       <div class="body">
         <div class="card warn"><div class="big">최초 계획: -10% 손절매<br>현재: -15%</div></div>
         <div class="row"><span>평균단가</span><b>10,000 → 9,250원</b></div>
@@ -181,7 +183,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
       <div class="cap">계획 외 거래 확인 <span class="new">차별점</span></div><div class="capd">충동적인 추가매수에<br><b>하룻밤의 숙려 시간</b>을 줌</div></div>
 
     <div class="capw"><div class="phone"><div class="screen">
-      <div class="bar"><div class="t">매도 체결 후</div><div class="h">계획의 실행</div></div>
+      <div class="bar"><div class="t">매도 체결 후<span class="ex">예시 화면</span></div><div class="h">계획의 실행</div></div>
       <div class="body">
         <div class="card good"><div class="ic">✓ 이익실현</div><div class="big">계획하신 1만2천원에서<br>절반 매도를 완료했습니다.</div></div>
         <div class="card good"><div class="ic">✓ 손절매</div><div class="big">손절매는 실패가 아니라<br>계획의 실행입니다.</div></div>
@@ -190,7 +192,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
       <div class="cap">매도 후 안내</div><div class="capd">손익이 아니라<br><b>계획을 지켰는지</b>를 안내</div></div>
 
     <div class="capw"><div class="phone"><div class="screen">
-      <div class="bar"><div class="t">월간 리포트</div><div class="h">나의 처분효과 리포트</div></div>
+      <div class="bar"><div class="t">월간 리포트<span class="ex">예시 화면</span></div><div class="h">나의 처분효과 리포트</div></div>
       <div class="body">
         <div class="lbl">평균 보유 기간</div>
         <div class="row"><span>이익 종목</span><b>2일</b></div>
