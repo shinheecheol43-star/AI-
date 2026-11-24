@@ -82,7 +82,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
 <!-- ================= 1. 서비스 흐름도 ================= -->
 <div class="sheet" id="img1" style="height:1190px">
   <div class="head"><div><div class="no">첨부 1</div><h1>하나뿐인 약속노트 — 매수 전에 세운 계획을 판단 순간마다 다시 보여준다</h1></div><div class="note">신청한 손님만 이용하는 선택형 서비스</div></div>
-  <div class="banner">예측은 할 수 없어도, 대응은 매수 전에 정할 수 있다<span>판단은 손님이, MTS는 손님의 계획을 기억한다</span></div>
+  <div class="banner">예측은 할 수 없어도, 대응은 매수 전에 정할 수 있다<span>행동재무학의 사전약속(pre-commitment)을 주문 흐름에 적용</span></div>
   <div class="flow">
     <div class="stage hot"><div class="when">STEP 1 · 매수 전</div><h3>매매 계획 수립</h3>
       <ul><li>매매 기간: 단기 · 중기 · 장기</li><li>최대 손실 <b>금액</b> → 손절가·최대 매수 수량 계산</li><li>목표 수익 (분할 매도 안내)</li><li>매도 후 대응</li><li>레버리지 상품 확인</li><li>하나Q 대화로 계획 수립</li></ul>
@@ -93,16 +93,16 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
       <div class="msg">"5분 만에 +8% 오른 상태에서 매수하셨어요"</div></div>
     <div class="arrow">›</div>
     <div class="stage"><div class="when">STEP 3 · 보유 중</div><h3>계획 외 거래 확인</h3>
-      <ul><li>추가매수 확인</li><li>추격매수 확인</li><li>목표가 상향 시 최소 수익 설정</li><li>보유 기간 초과 알림</li></ul>
+      <ul><li>추가매수·추격매수 확인</li><li><b>숙려 주문</b> (다음 날 재확인)</li><li>목표가 상향 시 최소 수익 설정</li><li>보유 기간 초과 알림</li></ul>
       <div class="msg">"최초 계획은 -10% 손절매, 현재 -15%입니다"</div></div>
     <div class="arrow">›</div>
     <div class="stage hot"><div class="when">STEP 4 · 매도 후</div><h3>계획의 실행</h3>
       <ul><li>체결 후에만 짧게 알림</li><li>손익이 아닌 계획 이행 여부 안내</li><li>미리 정한 매도 후 대응 안내</li></ul>
       <div class="msg">"계획하신 12,000원에서 절반 매도를 완료했습니다. 계획대로 대응하셨습니다"</div></div>
     <div class="arrow">›</div>
-    <div class="stage"><div class="when">STEP 5 · 월간</div><h3>월간 점검 리포트</h3>
-      <ul><li>계획대로 한 거래 vs 계획을 바꾼 거래</li><li>매수 근거별 성과</li><li>반복되는 위험 행동 확인</li></ul>
-      <div class="msg">"'급등 추종' 근거 매수: 10건 중 2건 수익"</div></div>
+    <div class="stage"><div class="when">STEP 5 · 월간</div><h3>나의 처분효과 리포트</h3>
+      <ul><li>이익·손실 종목 평균 보유 기간</li><li>계획 이행률</li><li>매수 근거별 성과</li></ul>
+      <div class="msg">"이익 종목 평균 2일, 손실 종목 평균 23일 보유"</div></div>
   </div>
   <div class="rules">
     <div class="rule"><b>계획된 매매는 방해하지 않는다</b><br>카드는 계획에 없던 매수에만 한 번 · 선택은 손님</div>
@@ -112,7 +112,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
   <table class="ba">
     <tr><th>상황</th><th>서비스 이용 전</th><th></th><th>서비스 이용 후</th></tr>
     <tr><td class="k">매수할 때</td><td class="b">손실 한도 없이 매수</td><td class="ar">→</td><td class="a">최대 손실 금액과 매도 기준을 정하고 매수</td></tr>
-    <tr><td class="k">하락 시</td><td class="b">즉흥적 추가매수</td><td class="ar">→</td><td class="a">최초 계획과 투자금 영향을 확인한 뒤 결정</td></tr>
+    <tr><td class="k">하락 시</td><td class="b">즉흥적 추가매수</td><td class="ar">→</td><td class="a">계획과 투자금 영향 확인 후 하루 숙려</td></tr>
     <tr><td class="k">상승 시</td><td class="b">기준 없는 매도로 수익 반납</td><td class="ar">→</td><td class="a">계획한 목표가에서 분할 매도</td></tr>
     <tr><td class="k">평가손실 시</td><td class="b">단기매매를 장기투자로 바꿔 방치</td><td class="ar">→</td><td class="a">보유 기간 초과 알림으로 계획 재점검</td></tr>
     <tr><td class="k">레버리지</td><td class="b">구조만 이해하고 매수</td><td class="ar">→</td><td class="a">본인 투자금 기준 손실 규모 확인 후 매수</td></tr>
@@ -196,7 +196,7 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
         <div class="lbl" style="margin-top:4px">원금 회복에 필요한 상승률</div>
         <div class="row"><span>-20% 손실</span><b>+25%</b></div>
         <div class="row"><span>-50% 손실</span><b>+100%</b></div>
-        <div class="btns"><div class="btn2">계획 변경 후 진행</div><div class="btn2">그대로 진행</div><div class="btn2">취소</div><div class="btn2" style="border-color:var(--teal);color:var(--teal-d);font-weight:700">내일 다시 생각하기</div></div>
+        <div class="btns"><div class="btn2">계획 변경 후 진행</div><div class="btn2">그대로 진행</div><div class="btn2">취소</div><div class="btn2" style="border-color:var(--teal);color:var(--teal-d);font-weight:700">숙려 주문(내일)</div></div>
       </div></div></div><div class="cap">추가매수 확인 (평가손실 시)</div></div>
 
     <div class="capw"><div class="phone"><div class="screen">
@@ -214,9 +214,11 @@ svg text{font-family:"NotoKRL","NotoKR",sans-serif;}
         <div class="card" style="background:#f3f5f7"><div class="ic" style="color:var(--ink2)">AI 차트 요약</div><div style="font-size:14px"><b>5분 만에 +8%</b> 오른 상태,<br>거래량 <b>평소의 5배</b>에서 매수하셨어요.</div></div>
         <div class="chips"><span class="chip">뉴스·공시</span><span class="chip">차트 돌파</span><span class="chip">타인 추천</span><span class="chip on">급등 추종</span><span class="chip">직감</span></div>
         <div class="field" style="color:var(--muted);font-size:13px">직접 입력하시면 더 자세한 분석이 가능합니다.</div>
-        <div class="lbl" style="margin-top:6px">월간 점검 미리보기</div>
-        <div class="row"><span>급등 추종</span><b>10건 중 2건 수익</b></div>
-        <div class="row"><span>뉴스·공시</span><b>8건 중 5건 수익</b></div>
+        <div class="lbl" style="margin-top:6px">나의 처분효과 리포트 미리보기</div>
+        <div class="row"><span>이익 종목 평균 보유</span><b>2일</b></div>
+        <div class="row"><span>손실 종목 평균 보유</span><b>23일</b></div>
+        <div class="row"><span>근거: 급등 추종</span><b>10건 중 2건 수익</b></div>
+        <div class="row"><span>근거: 뉴스·공시</span><b>8건 중 5건 수익</b></div>
         <div style="font-size:12px;color:var(--muted)">정규장 시간, 새 매수 체결 직후에만 물어봐요.</div>
       </div></div></div><div class="cap">단기매매 모드 매수 근거 질문</div></div>
 
